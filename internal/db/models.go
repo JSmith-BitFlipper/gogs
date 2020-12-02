@@ -178,7 +178,27 @@ func SetEngine() (*gorm.DB, error) {
 	return Init(gormLogger)
 }
 
+func CreateNewEngine() (x *xorm.Engine, err error) {
+	// TODO: Make SetEngine work on local `x`
+	if _, err = SetEngine(); err != nil {
+		return nil, err
+	}
+
+	if err = migrations.Migrate(x); err != nil {
+		return nil, fmt.Errorf("migrate: %v", err)
+	}
+
+	if err = x.StoreEngine("InnoDB").Sync2(legacyTables...); err != nil {
+		return nil, fmt.Errorf("sync structs to database tables: %v\n", err)
+	}
+
+	return x, nil
+}
+
 func NewEngine() (err error) {
+	// TODO: Make this work
+	// x, err := CreateNewEngine()
+
 	if _, err = SetEngine(); err != nil {
 		return err
 	}
