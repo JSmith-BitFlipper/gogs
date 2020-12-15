@@ -1,11 +1,11 @@
 version: '3'
 
 tasks:
-  web:
+  launch:
     desc: Build the binary and start the web server.
     deps: [build]
     cmds:
-      - ./gogs web
+      - ./gogs launch
     sources:
       - gogs.go
       - internal/**/*.go

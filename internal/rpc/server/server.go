@@ -4,19 +4,28 @@ import (
 	"net"
 	"net/http"
 	"net/rpc"
+	"sync"
 )
 
-func StartInternalRPC() error {
+func StartInternalRPC() (*sync.WaitGroup, error) {
 	rpc_fns := new(Repo)
 	rpc.Register(rpc_fns)
 	rpc.HandleHTTP()
 
 	l, e := net.Listen("tcp", ":1234")
 	if e != nil {
-		return e
+		return nil, e
 	}
 
-	// TODO: Make sure that this is process isolated!
-	go http.Serve(l, nil)
-	return nil
+	var wg sync.WaitGroup
+	wg.Add(1)
+
+	// Start the http RPC server in a goroutine
+	go func() {
+		// Decrement the counter when the goroutine completes
+		defer wg.Done()
+		http.Serve(l, nil)
+	}()
+
+	return &wg, nil
 }

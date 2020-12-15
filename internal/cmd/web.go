@@ -45,7 +45,6 @@ import (
 	"gogs.io/gogs/internal/route/org"
 	"gogs.io/gogs/internal/route/repo"
 	"gogs.io/gogs/internal/route/user"
-	rpc_server "gogs.io/gogs/internal/rpc/server"
 	"gogs.io/gogs/internal/template"
 )
 
@@ -688,17 +687,6 @@ func runWeb(c *cli.Context) error {
 	})
 
 	m.NotFound(route.NotFound)
-
-	// **********************
-	// ---- RPC SERVICES ----
-	// **********************
-
-	err = rpc_server.StartInternalRPC()
-	if err != nil {
-		log.Fatal("Error starting internal RPC services %v", err)
-	} else {
-		log.Info("RPC servers started")
-	}
 
 	// **********************
 	// ------- SERVER -------

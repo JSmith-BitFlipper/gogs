@@ -46,6 +46,24 @@ func checkRunMode() {
 	log.Info("Run mode: %s", strings.Title(macaron.Env))
 }
 
+// InitOnlyDB initilizes only the databse elements
+func InitOnlyDB(customConf string) error {
+	if err := conf.Init(""); err != nil {
+		log.Fatal("Failed to initialize configuration: %v", err)
+		return err
+	}
+	conf.InitLogging(false)
+
+	// initialize a connection to the database
+	if err := db.NewEngine(); err != nil {
+		log.Fatal("Failed to initialize ORM engine: %v", err)
+		return err
+	}
+	db.HasEngine = true
+
+	return nil
+}
+
 // GlobalInit is for global configuration reload-able.
 func GlobalInit(customConf string) error {
 	err := conf.Init(customConf)

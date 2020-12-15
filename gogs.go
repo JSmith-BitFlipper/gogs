@@ -27,6 +27,7 @@ func main() {
 	app.Usage = "A painless self-hosted Git service"
 	app.Version = conf.App.Version
 	app.Commands = []cli.Command{
+		cmd.Launch,
 		cmd.Web,
 		cmd.Serv,
 		cmd.Hook,
@@ -35,6 +36,7 @@ func main() {
 		cmd.Import,
 		cmd.Backup,
 		cmd.Restore,
+		cmd.RepoRPC,
 	}
 	if err := app.Run(os.Args); err != nil {
 		log.Fatal("Failed to start application: %v", err)
