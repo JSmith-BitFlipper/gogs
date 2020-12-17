@@ -216,11 +216,20 @@ func runWeb(c *cli.Context) error {
 			m.Post("/ssh/delete", user.DeleteSSHKey)
 			m.Group("/security", func() {
 				m.Get("", user.SettingsSecurity)
+
+				// OTP (one-time-password) two-factor authentication
 				m.Combo("/two_factor_enable").Get(user.SettingsTwoFactorEnable).
 					Post(user.SettingsTwoFactorEnablePost)
 				m.Combo("/two_factor_recovery_codes").Get(user.SettingsTwoFactorRecoveryCodes).
 					Post(user.SettingsTwoFactorRecoveryCodesPost)
 				m.Post("/two_factor_disable", user.SettingsTwoFactorDisable)
+
+				// Webauthn two-factor authentication
+				m.Group("/webauthn_two_factor_enable", func() {
+					m.Get("", user.SettingsWebauthnEnable)
+					m.Post("/begin", user.SettingsWebauthnRegistrationBegin)
+					m.Post("/finish", user.SettingsWebauthnRegistrationFinish)
+				})
 			})
 			m.Group("/repositories", func() {
 				m.Get("", user.SettingsRepos)

@@ -1213,3 +1213,14 @@ func (user *User) GetAccessibleRepositories(limit int) (repos []*Repository, _ e
 	}
 	return repos, sess.Join("INNER", "access", "access.user_id = ? AND access.repo_id = repository.id", user.ID).Find(&repos)
 }
+
+//
+// Webauthn support
+//
+func (u *User) ToWebauthnUser() webauthnUser {
+	w := webauthnUser{
+		userID:   u.ID,
+		username: u.LowerName, // The `LowerName` functions as the `username`
+	}
+	return w
+}

@@ -61,6 +61,12 @@ func InitOnlyDB(customConf string) error {
 	}
 	db.HasEngine = true
 
+	// Initialize the webauthn API interface
+	if err := db.InitWebauthnAPI(); err != nil {
+		log.Fatal("Failed to initialize Webauthn API: %v", err)
+		return err
+	}
+
 	return nil
 }
 
@@ -93,6 +99,12 @@ func GlobalInit(customConf string) error {
 			log.Fatal("Failed to initialize ORM engine: %v", err)
 		}
 		db.HasEngine = true
+
+		// Initialize the webauthn API interface
+		if err := db.InitWebauthnAPI(); err != nil {
+			log.Fatal("Failed to initialize Webauthn API: %v", err)
+			return err
+		}
 
 		db.LoadRepoConfig()
 		db.NewRepoContext()

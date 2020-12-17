@@ -218,6 +218,7 @@ func Init(w logger.Writer) (*gorm.DB, error) {
 	Perms = &perms{DB: db}
 	Repos = &repos{DB: db}
 	TwoFactors = &twoFactors{DB: db}
+	WebauthnEntries = &webauthnEntries{DB: db}
 	Users = &users{DB: db}
 
 	return db, nil

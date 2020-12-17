@@ -1,0 +1,49 @@
+{{template "base/head" .}}
+<script src="{{AppSubURL}}/js/base64.js"></script>
+<script src="{{AppSubURL}}/js/webauthn.js"></script>
+
+<script langauge="javascript">
+  var registrationListener = createRegistrationListener('#register_form',
+                                                        "{{$.Link}}/begin",
+                                                        "{{$.Link}}/finish");
+
+  //var attestationListener = createAttestationListener('#login_form',
+  //                                                    "{% url 'customer:login_begin' %}",
+  //                                                    "{% url 'customer:login_finish' %}");
+
+  document.addEventListener("DOMContentLoaded", e => {
+      document.querySelector('#registration_submit').addEventListener('click', registrationListener);
+      // document.querySelector('#login_submit').addEventListener('click', attestationListener);
+  });
+</script>
+
+<div class="user settings security two-factor">
+	<div class="ui container">
+		<div class="ui grid">
+			{{template "user/settings/navbar" .}}
+			<div class="twelve wide column content">
+				{{template "base/alert" .}}
+				<h4 class="ui top attached header">
+					{{.i18n.Tr "settings.webauthn_two_factor_enable_title"}}
+				</h4>
+                                <!-- ADDED -->
+				<div class="ui attached segment">
+					<form id="register_form" class="ui form" method="post">
+					  {{.CSRFTokenHTML}}
+					  <p class="text bold">{{.i18n.Tr "settings.webauthn_activate_desc"}}</p>
+					  <button id="registration_submit" class="ui green button">{{.i18n.Tr "settings.webauthn_activate"}}</button>
+					</form>
+
+					<!-- <p class="text bold">
+					 !-- 	{{.i18n.Tr "settings.webauthn_activate_desc"}}
+                                         !-- 
+                                         !-- 
+					 !-- 	<button class="ui green button">{{.i18n.Tr "settings.webauthn_activate"}}</button>
+					 !--         <button class="ui right mini green toggle button" data-url="{{$.Link}}/two_factor_disable">{{.i18n.Tr "settings.webauthn_activate"}}</button>
+					 !-- </p> -->
+				</div>
+			</div>
+		</div>
+	</div>
+</div>
+{{template "base/footer" .}}

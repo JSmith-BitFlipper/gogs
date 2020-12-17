@@ -11,6 +11,7 @@ import (
 	"html/template"
 	"image/png"
 	"io/ioutil"
+	"net/http"
 	"strings"
 
 	"github.com/pquerna/otp"
@@ -38,6 +39,7 @@ const (
 	SETTINGS_SECURITY                  = "user/settings/security"
 	SETTINGS_TWO_FACTOR_ENABLE         = "user/settings/two_factor_enable"
 	SETTINGS_TWO_FACTOR_RECOVERY_CODES = "user/settings/two_factor_recovery_codes"
+	SETTINGS_WEBAUTHN_ENABLE           = "user/settings/webauthn_two_factor_enable"
 	SETTINGS_REPOSITORIES              = "user/settings/repositories"
 	SETTINGS_ORGANIZATIONS             = "user/settings/organizations"
 	SETTINGS_APPLICATIONS              = "user/settings/applications"
@@ -388,6 +390,9 @@ func SettingsSecurity(c *context.Context) {
 	}
 	c.Data["TwoFactor"] = t
 
+	// TODO
+	c.Data["Webauthn"] = false
+
 	c.Success(SETTINGS_SECURITY)
 }
 
@@ -459,6 +464,52 @@ func SettingsTwoFactorEnablePost(c *context.Context) {
 	_ = c.Session.Delete("twoFactorURL")
 	c.Flash.Success(c.Tr("settings.two_factor_enable_success"))
 	c.RedirectSubpath("/user/settings/security/two_factor_recovery_codes")
+}
+
+func SettingsWebauthnEnable(c *context.Context) {
+	c.Title("settings.webauthn_two_factor_enable_title")
+	c.PageIs("SettingsSecurity")
+
+	c.Success(SETTINGS_WEBAUTHN_ENABLE)
+}
+
+func SettingsWebauthnRegistrationBegin(c *context.Context) {
+	// TODO
+	if false { // if c.User.IsEnabledTwoFactor() {
+		c.NotFound()
+		return
+	}
+
+	wuser := c.User.ToWebauthnUser()
+
+	// registerOptions := func(credCreationOpts *protocol.PublicKeyCredentialCreationOptions) {
+	// 	credCreationOpts.CredentialExcludeList = user.CredentialExcludeList()
+	// }
+
+	// generate PublicKeyCredentialCreationOptions, session data
+	options, sessionData, err := db.WebauthnAPI.BeginRegistration(
+		wuser,
+		// TODO registerOptions,
+	)
+
+	if err != nil {
+		log.Error(err.Error())
+		c.JSON(http.StatusInternalServerError, map[string]string{
+			"fail": err.Error(),
+		})
+		return
+	}
+
+	_ = c.Session.Set("webauthnRegistration", *sessionData)
+	c.JSONSuccess(options.Response)
+}
+
+func SettingsWebauthnRegistrationFinish(c *context.Context) {
+	// TODO
+	log.Info("ADDED Melts me like always high keep it strange.")
+
+	c.Flash.Success(c.Tr("settings.webauthn_two_factor_enable_success"))
+	c.RedirectSubpath("/user/settings/security")
 }
 
 func SettingsTwoFactorRecoveryCodes(c *context.Context) {

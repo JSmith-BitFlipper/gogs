@@ -8,8 +8,10 @@ require (
 	github.com/Masterminds/semver/v3 v3.1.1
 	github.com/Masterminds/sprig v2.22.0+incompatible // indirect
 	github.com/bgentry/speakeasy v0.1.0 // indirect
+	github.com/cloudflare/cfssl v1.5.0 // indirect
 	github.com/editorconfig/editorconfig-core-go/v2 v2.3.7
 	github.com/fatih/color v1.9.0 // indirect
+	github.com/fxamacker/cbor/v2 v2.2.0 // indirect
 	github.com/go-macaron/binding v1.1.1
 	github.com/go-macaron/cache v0.0.0-20190810181446-10f7c57e2196
 	github.com/go-macaron/captcha v0.2.0
@@ -63,7 +65,7 @@ require (
 	github.com/unknwon/paginater v0.0.0-20170405233947-45e5d631308e
 	github.com/urfave/cli v1.22.5
 	golang.org/x/crypto v0.0.0-20201208171446-5f87f3452ae9
-	golang.org/x/net v0.0.0-20200625001655-4c5254603344
+	golang.org/x/net v0.0.0-20201010224723-4f7140c49acb
 	golang.org/x/sync v0.0.0-20201207232520-09787c993a3a // indirect
 	golang.org/x/sys v0.0.0-20201214210602-f9fddec55a1e // indirect
 	golang.org/x/term v0.0.0-20201210144234-2321bbc49cbf // indirect
@@ -83,6 +85,7 @@ require (
 	gorm.io/gorm v1.20.7
 	mvdan.cc/sh v2.6.4+incompatible // indirect
 	unknwon.dev/clog/v2 v2.1.2
+	webauthn v0.0.0-00010101000000-000000000000
 	xorm.io/builder v0.3.6
 	xorm.io/core v0.7.2
 	xorm.io/xorm v0.8.0
@@ -90,3 +93,6 @@ require (
 
 // +heroku goVersion go1.15
 // +heroku install ./
+
+// For local `webauthn` import
+replace webauthn => ./webauthn
