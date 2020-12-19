@@ -4,7 +4,6 @@ import (
 	"encoding/gob"
 	"gorm.io/gorm"
 	"time"
-	log "unknwon.dev/clog/v2"
 
 	"gogs.io/gogs/internal/conf"
 
@@ -18,7 +17,7 @@ func InitWebauthnAPI() error {
 	WebauthnAPI, err = webauthn.New(&webauthn.Config{
 		RPDisplayName: "Gogs",                     // Display Name for your site
 		RPID:          conf.Server.URL.Hostname(), // Generally the domain name for your site
-		RPOrigin:      conf.Server.HTTPAddr,       // The origin URL for WebAuthn requests
+		RPOrigin:      conf.Server.ExternalURL,    // The origin URL for WebAuthn requests
 	})
 
 	// Register the `webauthn.SessionData` struct so that it can be stored in a web session
@@ -33,11 +32,10 @@ type WebauthnEntry struct {
 	Created     time.Time `xorm:"-" gorm:"-" json:"-"`
 	CreatedUnix int64
 
-	UKey      string `xorm:"VARCHAR(20) UNIQUE" gorm:"TYPE:VARCHAR(20);UNIQUE"`
-	PubKey    string `xorm:"VARCHAR(65) UNIQUE" gorm:"TYPE:VARCHAR(65);UNIQUE"`
-	CredID    string `xorm:"VARCHAR(250) UNIQUE" gorm:"TYPE:VARCHAR(250);UNIQUE"`
-	SignCount int64  `xorm:"DEFAULT 0" gorm:"DEFAULT:0"`
-	RPID      string `xorm:"VARCHAR(253)" gorm:"TYPE:VARCHAR(253)"`
+	PubKey    []byte `xorm:"VARCHAR(65) UNIQUE" gorm:"TYPE:VARCHAR(65);UNIQUE"`
+	CredID    []byte `xorm:"VARCHAR(250) UNIQUE" gorm:"TYPE:VARCHAR(250);UNIQUE"`
+	SignCount uint32 `xorm:"DEFAULT 0" gorm:"DEFAULT:0"`
+	RPID      string `xorm:"rp_id VARCHAR(253)" gorm:"COLUMN:rp_id;TYPE:VARCHAR(253)"`
 }
 
 // WebauthnStore is the persistent interface for WebAuthn.
@@ -45,7 +43,7 @@ type WebauthnEntry struct {
 // NOTE: All methods are sorted in alphabetical order.
 type WebauthnStore interface {
 	// Create creates a new Webauthn credential entry for given user.
-	Create() error
+	Create(userID int64, credential webauthn.Credential) error
 }
 
 var WebauthnEntries WebauthnStore
@@ -64,25 +62,26 @@ func (t *WebauthnEntry) AfterFind(tx *gorm.DB) error {
 	return nil
 }
 
+// Make sure `*webauthnEntries` implements `WebauthnStore`
 var _ WebauthnStore = (*webauthnEntries)(nil)
 
 type webauthnEntries struct {
 	*gorm.DB
 }
 
-func (db *webauthnEntries) Create() error {
-	log.Info("ADDED I'll take some from you tonight!")
-
+func (db *webauthnEntries) Create(userID int64, credential webauthn.Credential) error {
 	wentry := &WebauthnEntry{
-		UserID:    69,
-		UKey:      "damian",
-		PubKey:    "is really cool!",
-		CredID:    "but makes mistakes",
-		SignCount: 420,
-		RPID:      "but learns from them.",
+		UserID:    userID,
+		PubKey:    credential.PublicKey,
+		CredID:    credential.ID,
+		SignCount: credential.Authenticator.SignCount,
+		RPID:      "TODO",
 	}
 
-	return db.Transaction(func(tx *gorm.DB) error {
-		return tx.Create(&wentry).Error
-	})
+	// ADDED
+	// return db.Transaction(func(tx *gorm.DB) error {
+	// 	return tx.Create(&wentry).Error
+	// })
+
+	return db.DB.Create(&wentry).Error
 }

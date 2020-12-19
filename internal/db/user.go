@@ -1214,9 +1214,13 @@ func (user *User) GetAccessibleRepositories(limit int) (repos []*Repository, _ e
 	return repos, sess.Join("INNER", "access", "access.user_id = ? AND access.repo_id = repository.id", user.ID).Find(&repos)
 }
 
-//
-// Webauthn support
-//
+//  __      __      ___.                  __  .__
+// /  \    /  \ ____\_ |__ _____   __ ___/  |_|  |__   ____
+// \   \/\/   // __ \| __ \\__  \ |  |  \   __\  |  \ /    \
+//  \        /\  ___/| \_\ \/ __ \|  |  /|  | |   Y  \   |  \
+//   \__/\  /  \___  >___  (____  /____/ |__| |___|  /___|  /
+//        \/       \/    \/     \/                 \/     \/
+
 func (u *User) ToWebauthnUser() webauthnUser {
 	w := webauthnUser{
 		userID:   u.ID,

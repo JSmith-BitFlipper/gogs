@@ -28,6 +28,8 @@ import (
 	"gogs.io/gogs/internal/email"
 	"gogs.io/gogs/internal/form"
 	"gogs.io/gogs/internal/tool"
+
+	"webauthn/webauthn"
 )
 
 const (
@@ -482,6 +484,7 @@ func SettingsWebauthnRegistrationBegin(c *context.Context) {
 
 	wuser := c.User.ToWebauthnUser()
 
+	// TODO
 	// registerOptions := func(credCreationOpts *protocol.PublicKeyCredentialCreationOptions) {
 	// 	credCreationOpts.CredentialExcludeList = user.CredentialExcludeList()
 	// }
@@ -505,11 +508,46 @@ func SettingsWebauthnRegistrationBegin(c *context.Context) {
 }
 
 func SettingsWebauthnRegistrationFinish(c *context.Context) {
-	// TODO
-	log.Info("ADDED Melts me like always high keep it strange.")
+	// load the `sessionData`
+	sessionData, ok := c.Session.Get("webauthnRegistration").(webauthn.SessionData)
+	if !ok {
+		c.NotFound()
+		c.JSON(http.StatusInternalServerError, map[string]string{
+			"fail": "Webauthn session data not found",
+		})
+		return
+	}
+
+	wuser := c.User.ToWebauthnUser()
+
+	credential, err := db.WebauthnAPI.FinishRegistration(wuser, sessionData, c.Req.Request)
+	// ADDED credential, err := db.WebauthnAPI.FinishRegistration(wuser, sessionData, c.Req.Request)
+	if err != nil {
+		log.Error(err.Error())
+		c.JSON(http.StatusBadRequest, map[string]string{
+			"fail": err.Error(),
+		})
+		return
+	}
+
+	// Clear the session for this Webauthn registratoin
+	_ = c.Session.Delete("webauthnRegistration")
+
+	// Save the Webauthn credential
+	err = db.WebauthnEntries.Create(c.UserID(), *credential)
+
+	if err != nil {
+		log.Error(err.Error())
+		c.JSON(http.StatusInternalServerError, map[string]string{
+			"fail": err.Error(),
+		})
+		return
+	}
 
 	c.Flash.Success(c.Tr("settings.webauthn_two_factor_enable_success"))
-	c.RedirectSubpath("/user/settings/security")
+
+	// Redirect to the security homepage
+	c.JSONSuccess(map[string]string{"nexturl": "/user/settings/security"})
 }
 
 func SettingsTwoFactorRecoveryCodes(c *context.Context) {

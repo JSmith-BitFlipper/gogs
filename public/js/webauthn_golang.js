@@ -83,9 +83,7 @@ const registrationListenerHelper = async (form_id, begin_url, finish_url, e) => 
         return;
     }
     
-    alert("Succesfully registered as: " + formData.get("registration-email"))
-
-    console.warn("Redirecting to: " + assertionValidationResponse.nexturl)
+    console.warn("Redirecting to: " + assertionValidationResponse.nexturl);
     window.location.assign(assertionValidationResponse.nexturl);
 }
 
@@ -267,8 +265,10 @@ const transformNewAssertionForServer = (newAssertion) => {
         id: newAssertion.id,
         rawId: b64enc(rawId),
         type: newAssertion.type,
-        attObj: b64enc(attObj),
-        clientData: b64enc(clientDataJSON),
+        response: {
+            attestationObject: b64enc(attObj),
+            clientDataJSON: b64enc(clientDataJSON),
+        },
     };
 }
 
@@ -277,15 +277,26 @@ const transformNewAssertionForServer = (newAssertion) => {
  * @param {Object} credentialDataForServer 
  */
 const postNewAssertionToServer = async (formData, credentialDataForServer, finish_url) => {
-    Object.entries(credentialDataForServer).forEach(([key, value]) => {
-        formData.set(key, value);
-    });
+    // Object.entries(credentialDataForServer).forEach(([key, value]) => {
+    //     formData.set(key, value);
+    // });
     
+    // return await fetch_json(
+    //     finish_url, 
+    //     {
+    //         method: "POST",
+    //         body: formData
+    //     });
+
     return await fetch_json(
         finish_url, 
         {
             method: "POST",
-            body: formData
+            headers: 
+            {
+                'X-CSRF-TOKEN': formData.get('_csrf')
+            },
+            body: JSON.stringify(credentialDataForServer)
         });
 }
 
