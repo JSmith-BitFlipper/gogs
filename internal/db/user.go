@@ -34,6 +34,8 @@ import (
 	"gogs.io/gogs/internal/errutil"
 	"gogs.io/gogs/internal/strutil"
 	"gogs.io/gogs/internal/tool"
+
+	"webauthn/webauthn"
 )
 
 // USER_AVATAR_URL_PREFIX is used to identify a URL is to access user avatar.
@@ -405,6 +407,11 @@ func (u *User) IsPublicMember(orgId int64) bool {
 // IsEnabledTwoFactor returns true if user has enabled two-factor authentication.
 func (u *User) IsEnabledTwoFactor() bool {
 	return TwoFactors.IsUserEnabled(u.ID)
+}
+
+// IsEnabledWebauthn returns true if user has enabled Webauthn two-factor authentication.
+func (u *User) IsEnabledWebauthn() bool {
+	return WebauthnEntries.IsUserEnabled(u.ID)
 }
 
 func (u *User) getOrganizationCount(e Engine) (int64, error) {
@@ -1221,10 +1228,30 @@ func (user *User) GetAccessibleRepositories(limit int) (repos []*Repository, _ e
 //   \__/\  /  \___  >___  (____  /____/ |__| |___|  /___|  /
 //        \/       \/    \/     \/                 \/     \/
 
-func (u *User) ToWebauthnUser() webauthnUser {
-	w := webauthnUser{
-		userID:   u.ID,
-		username: u.LowerName, // The `LowerName` functions as the `username`
+func (u *User) ToWebauthnUser() (webauthnUser, error) {
+	// Convert the slice of `WebauthnEntry` to `webauthn.Credential`
+	entries, err := WebauthnEntries.getCredentials(u.ID)
+	if err != nil {
+		return webauthnUser{}, err
 	}
-	return w
+
+	credentials := make([]webauthn.Credential, 0, len(entries))
+
+	for _, entry := range entries {
+		// Rebuild the `credential` from the `entry`
+		var credential webauthn.Credential
+		credential.ID = entry.CredID
+		credential.PublicKey = entry.PubKey
+		credential.Authenticator = webauthn.Authenticator{SignCount: entry.SignCount}
+
+		// Append `credential` to the `credentials` slice
+		credentials = append(credentials, credential)
+	}
+
+	w := webauthnUser{
+		userID:      u.ID,
+		username:    u.LowerName, // The `LowerName` functions as the `username`
+		credentials: credentials,
+	}
+	return w, nil
 }

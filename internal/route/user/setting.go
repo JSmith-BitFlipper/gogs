@@ -392,8 +392,7 @@ func SettingsSecurity(c *context.Context) {
 	}
 	c.Data["TwoFactor"] = t
 
-	// TODO
-	c.Data["Webauthn"] = false
+	c.Data["Webauthn"] = c.User.IsEnabledWebauthn()
 
 	c.Success(SETTINGS_SECURITY)
 }
@@ -469,20 +468,48 @@ func SettingsTwoFactorEnablePost(c *context.Context) {
 }
 
 func SettingsWebauthnEnable(c *context.Context) {
+	if c.User.IsEnabledWebauthn() {
+		c.NotFound()
+		return
+	}
+
 	c.Title("settings.webauthn_two_factor_enable_title")
 	c.PageIs("SettingsSecurity")
 
 	c.Success(SETTINGS_WEBAUTHN_ENABLE)
 }
 
-func SettingsWebauthnRegistrationBegin(c *context.Context) {
-	// TODO
-	if false { // if c.User.IsEnabledTwoFactor() {
+func SettingsWebauthnDisable(c *context.Context) {
+	if !c.User.IsEnabledWebauthn() {
 		c.NotFound()
 		return
 	}
 
-	wuser := c.User.ToWebauthnUser()
+	if err := db.DeleteWebauthn(c.UserID()); err != nil {
+		c.Errorf(err, "delete two factor")
+		return
+	}
+
+	c.Flash.Success(c.Tr("settings.webauthn_two_factor_disable_success"))
+	c.JSONSuccess(map[string]interface{}{
+		"redirect": conf.Server.Subpath + "/user/settings/security",
+	})
+}
+
+func SettingsWebauthnRegistrationBegin(c *context.Context) {
+	if c.User.IsEnabledWebauthn() {
+		c.NotFound()
+		return
+	}
+
+	wuser, err := c.User.ToWebauthnUser()
+	if err != nil {
+		log.Error(err.Error())
+		c.JSON(http.StatusInternalServerError, map[string]string{
+			"fail": err.Error(),
+		})
+		return
+	}
 
 	// TODO
 	// registerOptions := func(credCreationOpts *protocol.PublicKeyCredentialCreationOptions) {
@@ -508,7 +535,7 @@ func SettingsWebauthnRegistrationBegin(c *context.Context) {
 }
 
 func SettingsWebauthnRegistrationFinish(c *context.Context) {
-	// load the `sessionData`
+	// Load the `sessionData`
 	sessionData, ok := c.Session.Get("webauthnRegistration").(webauthn.SessionData)
 	if !ok {
 		c.NotFound()
@@ -518,7 +545,15 @@ func SettingsWebauthnRegistrationFinish(c *context.Context) {
 		return
 	}
 
-	wuser := c.User.ToWebauthnUser()
+	// Get the webauthn user
+	wuser, err := c.User.ToWebauthnUser()
+	if err != nil {
+		log.Error(err.Error())
+		c.JSON(http.StatusInternalServerError, map[string]string{
+			"fail": err.Error(),
+		})
+		return
+	}
 
 	credential, err := db.WebauthnAPI.FinishRegistration(wuser, sessionData, c.Req.Request)
 	// ADDED credential, err := db.WebauthnAPI.FinishRegistration(wuser, sessionData, c.Req.Request)
@@ -530,7 +565,7 @@ func SettingsWebauthnRegistrationFinish(c *context.Context) {
 		return
 	}
 
-	// Clear the session for this Webauthn registratoin
+	// Clear the session for this Webauthn registration
 	_ = c.Session.Delete("webauthnRegistration")
 
 	// Save the Webauthn credential
@@ -546,8 +581,10 @@ func SettingsWebauthnRegistrationFinish(c *context.Context) {
 
 	c.Flash.Success(c.Tr("settings.webauthn_two_factor_enable_success"))
 
+	// TODO: This can be done with a `Redirect` call and modify the javascript
+
 	// Redirect to the security homepage
-	c.JSONSuccess(map[string]string{"nexturl": "/user/settings/security"})
+	c.JSONSuccess(map[string]string{"nexturl": conf.Server.Subpath + "/user/settings/security"})
 }
 
 func SettingsTwoFactorRecoveryCodes(c *context.Context) {

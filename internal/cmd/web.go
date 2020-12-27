@@ -192,6 +192,9 @@ func runWeb(c *cli.Context) error {
 					Post(bindIgnErr(form.SignIn{}), user.LoginPost)
 				m.Combo("/two_factor").Get(user.LoginTwoFactor).Post(user.LoginTwoFactorPost)
 				m.Combo("/two_factor_recovery_code").Get(user.LoginTwoFactorRecoveryCode).Post(user.LoginTwoFactorRecoveryCodePost)
+
+				// Webauthn login finish from cookie
+				m.Post("/webauthn_finish", user.WebauthnFinishLogin)
 			})
 
 			m.Get("/sign_up", user.SignUp)
@@ -230,6 +233,7 @@ func runWeb(c *cli.Context) error {
 					m.Post("/begin", user.SettingsWebauthnRegistrationBegin)
 					m.Post("/finish", user.SettingsWebauthnRegistrationFinish)
 				})
+				m.Post("/webauthn_two_factor_disable", user.SettingsWebauthnDisable)
 			})
 			m.Group("/repositories", func() {
 				m.Get("", user.SettingsRepos)

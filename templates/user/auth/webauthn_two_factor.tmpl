@@ -1,0 +1,31 @@
+{{template "base/head" .}}
+
+<script src="{{AppSubURL}}/js/base64.js"></script>
+<script src="{{AppSubURL}}/js/webauthn_golang.js"></script>
+
+<script langauge="javascript">
+  var attestationListener = createAttestationListenerCookie("webauthn_login_begin",
+                                                            "{{$.Link}}/webauthn_finish");
+
+  document.addEventListener("DOMContentLoaded", e => {
+      document.querySelector('#webauthn_login_submit').addEventListener('click', attestationListener);
+  });
+</script>
+
+<div class="user signin two-factor">
+	<div class="ui middle very relaxed page grid">
+		<div class="column">
+			<form class="ui form" action="{{.Link}}" method="post">
+				{{.CSRFTokenHTML}}
+				<h3 class="ui top attached center header">
+					{{.i18n.Tr "auth.login_webauthn"}}
+				</h3>
+				<div class="ui attached segment">
+					{{template "base/alert" .}}
+					<button id="webauthn_login_submit" class="ui fluid green button">{{.i18n.Tr "settings.webauthn_two_factor_verify"}}</button>
+				</div>
+			</form>
+		</div>
+	</div>
+</div>
+{{template "base/footer" .}}

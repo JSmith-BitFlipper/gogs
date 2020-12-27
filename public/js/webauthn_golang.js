@@ -19,6 +19,22 @@ function hexEncode(buf) {
                 .join("");
 }
 
+// https://stackoverflow.com/questions/10730362/get-cookie-by-name
+function getCookie(name) {
+    var nameEQ = name + "=";
+    var ca = document.cookie.split(';');
+    for(var i = 0; i < ca.length; i++) {
+        var c = ca[i];
+        while (c.charAt(0)==' ') {
+            c = c.substring(1,c.length);
+        }
+        if (c.indexOf(nameEQ) == 0) {
+            return c.substring(nameEQ.length,c.length);
+        }
+    }
+    return null;
+}
+
 async function fetch_json(url, options) {
     const response = await fetch(url, options);    
     const body = await response.json();
@@ -38,11 +54,11 @@ async function fetch_json(url, options) {
 const registrationListenerHelper = async (form_id, begin_url, finish_url, e) => {
     e.preventDefault();
 
-    // gather the data in the form
+    // Gather the data in the form
     const form = document.querySelector(form_id);
     const formData = new FormData(form);
 
-    // post the data to the server to generate the PublicKeyCredentialCreateOptions
+    // POST the data to the server to generate the PublicKeyCredentialCreateOptions
     let credentialCreateOptionsFromServer;
     try {
         credentialCreateOptionsFromServer = await getCredentialCreateOptionsFromServer(formData, begin_url);
@@ -52,11 +68,11 @@ const registrationListenerHelper = async (form_id, begin_url, finish_url, e) => 
         return;
     }
 
-    // convert certain members of the PublicKeyCredentialCreateOptions into
+    // Convert certain members of the PublicKeyCredentialCreateOptions into
     // byte arrays as expected by the spec.
     const publicKeyCredentialCreateOptions = transformCredentialCreateOptions(credentialCreateOptionsFromServer);
     
-    // request the authenticator(s) to create a new credential keypair.
+    // Request the authenticator(s) to create a new credential keypair.
     let credential;
     try {
         credential = await navigator.credentials.create({
@@ -68,11 +84,11 @@ const registrationListenerHelper = async (form_id, begin_url, finish_url, e) => 
         return;
     }
 
-    // we now have a new credential! We now need to encode the byte arrays
+    // We now have a new credential! We now need to encode the byte arrays
     // in the credential into strings, for posting to our server.
     const newAssertionForServer = transformNewAssertionForServer(credential);
 
-    // post the transformed credential data to the server for validation
+    // POST the transformed credential data to the server for validation
     // and storing the public key
     let assertionValidationResponse;
     try {
@@ -175,8 +191,6 @@ const transformCredentialCreateOptions = (credentialCreateOptionsFromServer) => 
     return transformedCredentialCreateOptions;
 }
 
-
-
 /**
  * AUTHENTICATION FUNCTIONS
  */
@@ -186,28 +200,43 @@ const transformCredentialCreateOptions = (credentialCreateOptionsFromServer) => 
  * Callback executed after submitting login form
  * @param {Event} e 
  */
-const attestationListenerHelper = async (form_id, begin_url, finish_url, e) => {
+const attestationListenerHelper = async (form_id, begin_src, begin_type, finish_url, e) => {
     e.preventDefault();
-    // gather the data in the form
-    const form = document.querySelector(form_id);
-    const formData = new FormData(form);
 
-    // post the login data to the server to retrieve the PublicKeyCredentialRequestOptions
     let credentialCreateOptionsFromServer;
-    try {
-        credentialRequestOptionsFromServer = await getCredentialRequestOptionsFromServer(formData, begin_url);
-    } catch (err) {
-        alert("Error when getting request options from server: " + err);
+
+    switch(begin_type) {
+    case "url": {
+        // Gather the data in the form
+        const form = document.querySelector(form_id);
+        const formData = new FormData(form);
+
+        // POST the login data to the server to retrieve the `PublicKeyCredentialRequestOptions`
+        try {
+            credentialRequestOptionsFromServer = await getCredentialRequestOptionsFromServer(formData, begin_src);
+        } catch (err) {
+            alert("Error when getting request options from server: " + err);
+            window.location.reload(false);
+            return;
+        }
+        break;
+    }
+    case "cookie": {
+        credentialRequestOptionsFromServer = JSON.parse(decodeURIComponent(getCookie(begin_src)));
+        break;
+    }
+    default:
+        alert("Unknown begin_type: " + begin_type);
         window.location.reload(false);
-        return;
+        return;        
     }
 
-    // convert certain members of the PublicKeyCredentialRequestOptions into
+    // Convert certain members of the PublicKeyCredentialRequestOptions into
     // byte arrays as expected by the spec.    
     const transformedCredentialRequestOptions = transformCredentialRequestOptions(
         credentialRequestOptionsFromServer);
 
-    // request the authenticator to create an assertion signature using the
+    // Request the authenticator to create an assertion signature using the
     // credential private key
     let assertion;
     try {
@@ -220,29 +249,44 @@ const attestationListenerHelper = async (form_id, begin_url, finish_url, e) => {
         return;
     }
 
-    // we now have an authentication assertion! encode the byte arrays contained
+    // We now have an authentication assertion! encode the byte arrays contained
     // in the assertion data as strings for posting to the server
     const transformedAssertionForServer = transformAssertionForServer(assertion);
 
-    // post the assertion to the server for verification.
-    let response;
-    try {
-        response = await postAssertionToServer(formData, transformedAssertionForServer, finish_url);
-    } catch (err) {
-        alert("Error when validating assertion on server: " + err);
-        window.location.reload(false);
-        return;
-    }
+    // POST the assertion to the server for verification.
+    const response = await postAssertionToServer(transformedAssertionForServer, finish_url);
 
-    alert("Succesfully attestated request!");
+    // Go to the url in the `response`
+    window.location.assign(response.url);
 
-    console.warn("Redirecting to: " + response.nexturl);
-    window.location.assign(response.nexturl);
+    // let response;
+    // try {
+    //     response = await postAssertionToServer(transformedAssertionForServer, finish_url);
+    // } catch (err) {
+    //     alert("Error when validating assertion on server: " + err);
+    //     window.location.reload(false);
+    //     return;
+    // }
+
+    // alert("Succesfully attestated request!");
+
+    // console.warn("Redirecting to: " + response.nexturl);
+
 };
 
-const createAttestationListener = (form_id, begin_url, finish_url) => {
+const createAttestationListenerURL = (form_id, begin_url, finish_url) => {
     async function listener_fn(e) {
-        return attestationListenerHelper(form_id, begin_url, finish_url, e);
+        // TODO: Make string "url" to constant variable
+        return attestationListenerHelper(form_id, begin_url, "url", finish_url, e);
+    }
+
+    return listener_fn;
+}
+
+const createAttestationListenerCookie = (begin_cookie_name, finish_url) => {
+    async function listener_fn(e) {
+        // TODO: Make string "cookie" to constant variable
+        return attestationListenerHelper("", begin_cookie_name, "cookie", finish_url, e);
     }
 
     return listener_fn;
@@ -277,6 +321,7 @@ const transformNewAssertionForServer = (newAssertion) => {
  * @param {Object} credentialDataForServer 
  */
 const postNewAssertionToServer = async (formData, credentialDataForServer, finish_url) => {
+    // TODO: Clean up
     // Object.entries(credentialDataForServer).forEach(([key, value]) => {
     //     formData.set(key, value);
     // });
@@ -294,6 +339,7 @@ const postNewAssertionToServer = async (formData, credentialDataForServer, finis
             method: "POST",
             headers: 
             {
+                // TODO: Is `formData` necessary here
                 'X-CSRF-TOKEN': formData.get('_csrf')
             },
             body: JSON.stringify(credentialDataForServer)
@@ -314,9 +360,11 @@ const transformAssertionForServer = (newAssertion) => {
         id: newAssertion.id,
         rawId: b64enc(rawId),
         type: newAssertion.type,
-        authData: b64RawEnc(authData),
-        clientData: b64RawEnc(clientDataJSON),
-        signature: hexEncode(sig),
+        response: {
+            authenticatorData: b64enc(authData),
+            clientDataJSON: b64enc(clientDataJSON),
+            signature: b64enc(sig),
+        }
     };
 };
 
@@ -324,16 +372,38 @@ const transformAssertionForServer = (newAssertion) => {
  * Post the assertion to the server for validation and logging the user in. 
  * @param {Object} assertionDataForServer 
  */
-const postAssertionToServer = async (formData, assertionDataForServer, finish_url) => {
-    Object.entries(assertionDataForServer).forEach(([key, value]) => {
-        formData.set(key, value);
-    });
+const postAssertionToServer = async (assertionDataForServer, finish_url) => {
+    // TODO: Clean up
+    // const formData = new FormData();
+    // Object.entries(assertionDataForServer).forEach(([key, value]) => {
+    //     formData.set(key, value);
+    // });
 
-    return await fetch_json(
+    // // Only POST, no need to get any response
+    // return await fetch(
+    //     finish_url,
+    //     {
+    //         method: "POST",
+    //         headers: 
+    //         {
+    //             // TODO: Is `formData` necessary here
+    //             'X-CSRF-TOKEN': getCookie('_csrf')
+    //         },
+    //         body: formData
+    //     }
+    // );
+
+    // POST without expecting JSON response
+    return await fetch(
         finish_url,
         {
             method: "POST",
-            body: formData
+            headers: 
+            {
+                // TODO: the token comes up as `null`
+                'X-CSRF-TOKEN': getCookie('_csrf')
+            },
+            body: JSON.stringify(assertionDataForServer)
         }
     );
 }

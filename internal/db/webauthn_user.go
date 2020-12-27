@@ -8,8 +8,9 @@ import (
 
 // Webauthn is public key of a user.
 type webauthnUser struct {
-	userID   int64
-	username string
+	userID      int64
+	username    string
+	credentials []webauthn.Credential
 }
 
 // Make sure `webauthnUser` implements the `webauthn.User` interface
@@ -34,6 +35,5 @@ func (w webauthnUser) WebAuthnIcon() string {
 }
 
 func (w webauthnUser) WebAuthnCredentials() []webauthn.Credential {
-	// TODO
-	return []webauthn.Credential{}
+	return w.credentials
 }

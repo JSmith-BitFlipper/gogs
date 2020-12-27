@@ -5,6 +5,10 @@ import (
 	"net/rpc"
 )
 
+func GetWebauthnUserOptions() error {
+	// TOOD: Get the user options from the rpc_server, such as the challenge, remembering it, etc.
+}
+
 func Repo_DeleteRepository(args *shared.Repo_DeleteRepositoryArgs, reply *interface{}) error {
 	client, err := rpc.DialHTTP("tcp", "localhost:1234")
 	if err != nil {

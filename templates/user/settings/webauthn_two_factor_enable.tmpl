@@ -7,13 +7,8 @@
                                                         "{{$.Link}}/begin",
                                                         "{{$.Link}}/finish");
 
-  //var attestationListener = createAttestationListener('#login_form',
-  //                                                    "{% url 'customer:login_begin' %}",
-  //                                                    "{% url 'customer:login_finish' %}");
-
   document.addEventListener("DOMContentLoaded", e => {
       document.querySelector('#registration_submit').addEventListener('click', registrationListener);
-      // document.querySelector('#login_submit').addEventListener('click', attestationListener);
   });
 </script>
 

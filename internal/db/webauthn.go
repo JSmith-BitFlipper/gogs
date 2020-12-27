@@ -2,10 +2,12 @@ package db
 
 import (
 	"encoding/gob"
+	"fmt"
 	"gorm.io/gorm"
 	"time"
 
 	"gogs.io/gogs/internal/conf"
+	log "unknwon.dev/clog/v2"
 
 	"webauthn/webauthn"
 )
@@ -44,6 +46,16 @@ type WebauthnEntry struct {
 type WebauthnStore interface {
 	// Create creates a new Webauthn credential entry for given user.
 	Create(userID int64, credential webauthn.Credential) error
+
+	// IsUserEnabled returns true if the user has enabled Webauthn 2FA.
+	IsUserEnabled(userID int64) bool
+
+	//
+	// Private functions
+	//
+
+	// Query the database for the `WebauthnEntry`s of `userID`
+	getCredentials(userID int64) ([]*WebauthnEntry, error)
 }
 
 var WebauthnEntries WebauthnStore
@@ -78,10 +90,45 @@ func (db *webauthnEntries) Create(userID int64, credential webauthn.Credential) 
 		RPID:      "TODO",
 	}
 
-	// ADDED
-	// return db.Transaction(func(tx *gorm.DB) error {
-	// 	return tx.Create(&wentry).Error
-	// })
-
 	return db.DB.Create(&wentry).Error
+}
+
+func (db *webauthnEntries) numCredentials(userID int64) (count int64) {
+	err := db.Model(new(WebauthnEntry)).Where("user_id = ?", userID).Count(&count).Error
+	if err != nil {
+		log.Error("Failed to count webauthn entries [user_id: %d]: %v", userID, err)
+	}
+	return count
+}
+
+func (db *webauthnEntries) getCredentials(userID int64) ([]*WebauthnEntry, error) {
+	ncreds := db.numCredentials(userID)
+	entries := make([]*WebauthnEntry, 0, ncreds)
+
+	err := db.Model(new(WebauthnEntry)).Where("user_id = ?", userID).Find(&entries).Error
+	if err != nil {
+		log.Error("Failed to get webauthn entries [user_id: %d]: %v", userID, err)
+		return []*WebauthnEntry{}, err
+	}
+
+	return entries, nil
+}
+
+func (db *webauthnEntries) IsUserEnabled(userID int64) bool {
+	return db.numCredentials(userID) > 0
+}
+
+// DeleteWebauthn removes Webauthn two-factor authentication entry from the database
+func DeleteWebauthn(userID int64) (err error) {
+	sess := x.NewSession()
+	defer sess.Close()
+	if err = sess.Begin(); err != nil {
+		return err
+	}
+
+	if _, err = sess.Where("user_id = ?", userID).Delete(new(WebauthnEntry)); err != nil {
+		return fmt.Errorf("delete webauthn two-factor: %v", err)
+	}
+
+	return sess.Commit()
 }

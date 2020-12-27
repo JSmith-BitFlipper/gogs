@@ -5,6 +5,7 @@
 package user
 
 import (
+	"encoding/json"
 	"fmt"
 	"net/url"
 
@@ -19,12 +20,16 @@ import (
 	"gogs.io/gogs/internal/email"
 	"gogs.io/gogs/internal/form"
 	"gogs.io/gogs/internal/tool"
+
+	"webauthn/protocol"
+	"webauthn/webauthn"
 )
 
 const (
 	LOGIN                    = "user/auth/login"
 	TWO_FACTOR               = "user/auth/two_factor"
 	TWO_FACTOR_RECOVERY_CODE = "user/auth/two_factor_recovery_code"
+	WEBAUTHN_TWO_FACTOR      = "user/auth/webauthn_two_factor"
 	SIGNUP                   = "user/auth/signup"
 	ACTIVATE                 = "user/auth/activate"
 	FORGOT_PASSWORD          = "user/auth/forgot_passwd"
@@ -127,8 +132,8 @@ func afterLogin(c *context.Context, u *db.User, remember bool) {
 
 	_ = c.Session.Set("uid", u.ID)
 	_ = c.Session.Set("uname", u.Name)
-	_ = c.Session.Delete("twoFactorRemember")
-	_ = c.Session.Delete("twoFactorUserID")
+	_ = c.Session.Delete("loginRemember")
+	_ = c.Session.Delete("loginUserID")
 
 	// Clear whatever CSRF has right now, force to generate a new one
 	c.SetCookie(conf.Session.CSRFCookieName, "", -1, conf.Server.Subpath)
@@ -183,18 +188,22 @@ func LoginPost(c *context.Context, f form.SignIn) {
 		return
 	}
 
-	if !u.IsEnabledTwoFactor() {
+	_ = c.Session.Set("loginRemember", f.Remember)
+	_ = c.Session.Set("loginUserID", u.ID)
+
+	if u.IsEnabledTwoFactor() {
+		c.RedirectSubpath("/user/login/two_factor")
+	} else if u.IsEnabledWebauthn() {
+		webauthnBeginLogin(c, u, f.Remember)
+	} else {
 		afterLogin(c, u, f.Remember)
-		return
 	}
 
-	_ = c.Session.Set("twoFactorRemember", f.Remember)
-	_ = c.Session.Set("twoFactorUserID", u.ID)
-	c.RedirectSubpath("/user/login/two_factor")
+	return
 }
 
 func LoginTwoFactor(c *context.Context) {
-	_, ok := c.Session.Get("twoFactorUserID").(int64)
+	_, ok := c.Session.Get("loginUserID").(int64)
 	if !ok {
 		c.NotFound()
 		return
@@ -204,7 +213,7 @@ func LoginTwoFactor(c *context.Context) {
 }
 
 func LoginTwoFactorPost(c *context.Context) {
-	userID, ok := c.Session.Get("twoFactorUserID").(int64)
+	userID, ok := c.Session.Get("loginUserID").(int64)
 	if !ok {
 		c.NotFound()
 		return
@@ -243,11 +252,11 @@ func LoginTwoFactorPost(c *context.Context) {
 		log.Error("Failed to put cache 'two factor passcode': %v", err)
 	}
 
-	afterLogin(c, u, c.Session.Get("twoFactorRemember").(bool))
+	afterLogin(c, u, c.Session.Get("loginRemember").(bool))
 }
 
 func LoginTwoFactorRecoveryCode(c *context.Context) {
-	_, ok := c.Session.Get("twoFactorUserID").(int64)
+	_, ok := c.Session.Get("loginUserID").(int64)
 	if !ok {
 		c.NotFound()
 		return
@@ -257,7 +266,7 @@ func LoginTwoFactorRecoveryCode(c *context.Context) {
 }
 
 func LoginTwoFactorRecoveryCodePost(c *context.Context) {
-	userID, ok := c.Session.Get("twoFactorUserID").(int64)
+	userID, ok := c.Session.Get("loginUserID").(int64)
 	if !ok {
 		c.NotFound()
 		return
@@ -278,7 +287,104 @@ func LoginTwoFactorRecoveryCodePost(c *context.Context) {
 		c.Error(err, "get user by ID")
 		return
 	}
-	afterLogin(c, u, c.Session.Get("twoFactorRemember").(bool))
+	afterLogin(c, u, c.Session.Get("loginRemember").(bool))
+}
+
+func webauthnBeginLogin(c *context.Context, u *db.User, remember bool) {
+	wuser, err := u.ToWebauthnUser()
+	if err != nil {
+		log.Error(err.Error())
+		c.RenderWithErr(fmt.Sprintf("%s: %v", c.Tr("settings.webauthn_two_factor_error"), err),
+			LOGIN, nil)
+		return
+	}
+
+	// Generate PublicKeyCredentialRequestOptions, session data
+	options, sessionData, err := db.WebauthnAPI.BeginLogin(wuser, nil)
+	if err != nil {
+		log.Error(err.Error())
+		c.RenderWithErr(fmt.Sprintf("%s: %v", c.Tr("settings.webauthn_two_factor_error"), err),
+			LOGIN, nil)
+		return
+	}
+
+	// Econde the `options` into JSON
+	json_options, err := json.Marshal(options.Response)
+	if err != nil {
+		log.Error(err.Error())
+		c.RenderWithErr(fmt.Sprintf("%s: %v", c.Tr("settings.webauthn_two_factor_error"), err),
+			LOGIN, nil)
+		return
+	}
+
+	_ = c.Session.Set("webauthnLogin", *sessionData)
+
+	// Save the login webauthn options in the current browser session
+	c.SetCookie("webauthn_login_begin", string(json_options), 0, conf.Server.Subpath)
+
+	c.Success(WEBAUTHN_TWO_FACTOR)
+}
+
+func WebauthnFinishLogin(c *context.Context) {
+	// Load the `sessionData`
+	sessionData, ok := c.Session.Get("webauthnLogin").(webauthn.SessionData)
+	if !ok {
+		err := "Webauthn session data not found"
+		log.Error(err)
+		c.RenderWithErr(fmt.Sprintf("%s: %s", c.Tr("settings.webauthn_two_factor_error"), err),
+			LOGIN, nil)
+		return
+	}
+
+	userID, ok := c.Session.Get("loginUserID").(int64)
+	if !ok {
+		err := "Webauthn session userID not found"
+		log.Error(err)
+		c.RenderWithErr(fmt.Sprintf("%s: %s", c.Tr("settings.webauthn_two_factor_error"), err),
+			LOGIN, nil)
+		return
+	}
+
+	u, err := db.GetUserByID(userID)
+	if err != nil {
+		log.Error(err.Error())
+		c.RenderWithErr(fmt.Sprintf("%s: %s",
+			c.Tr("settings.webauthn_two_factor_error"),
+			"Database cannot find user by ID"),
+			LOGIN, nil)
+		return
+	}
+
+	// Get the webauthn user
+	wuser, err := u.ToWebauthnUser()
+	if err != nil {
+		log.Error(err.Error())
+		c.RenderWithErr(fmt.Sprintf("%s: %v", c.Tr("settings.webauthn_two_factor_error"), err),
+			LOGIN, nil)
+		return
+	}
+
+	// There are no extensions to verify during login authentication
+	var noVerify protocol.ExtensionsVerifier = func(_, _ protocol.AuthenticationExtensions) bool {
+		return true
+	}
+
+	// TODO: In an actual implementation, we should perform additional checks on
+	// the returned 'credential', i.e. check 'credential.Authenticator.CloneWarning'
+	// and then increment the credentials counter
+	_, err = db.WebauthnAPI.FinishLogin(wuser, sessionData, noVerify, c.Req.Request)
+	if err != nil {
+		log.Error(err.Error())
+		// TODO: The render error does not work
+		c.RenderWithErr(fmt.Sprintf("%s: %v", c.Tr("settings.webauthn_two_factor_error"), err),
+			LOGIN, nil)
+		return
+	}
+
+	// Clear the session for this Webauthn login
+	_ = c.Session.Delete("webauthnLogin")
+
+	afterLogin(c, u, c.Session.Get("loginRemember").(bool))
 }
 
 func SignOut(c *context.Context) {
