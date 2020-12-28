@@ -5,6 +5,7 @@
 package repo
 
 import (
+	"bytes"
 	"fmt"
 	"io/ioutil"
 	"strings"
@@ -262,14 +263,15 @@ func SettingsPost(c *context.Context, f form.RepoSetting) {
 			}
 		}
 
-		if err := db.DeleteRepository(c.Repo.Owner.ID, repo.ID); err != nil {
-			c.Error(err, "delete repository")
+		options, err := db.DeleteRepositoryBegin(c.User.ID)
+		if err != nil {
+			c.Error(err, "delete repository begin")
 			return
 		}
-		log.Trace("Repository deleted: %s/%s", c.Repo.Owner.Name, repo.Name)
 
-		c.Flash.Success(c.Tr("repo.settings.deletion_success"))
-		c.Redirect(c.Repo.Owner.DashboardLink())
+		// Send over the webauthn `options`
+		c.JSONSuccess(options.Response)
+		return
 
 	case "delete-wiki":
 		if !c.Repo.IsOwner() {
@@ -303,6 +305,32 @@ func SettingsPost(c *context.Context, f form.RepoSetting) {
 	default:
 		c.NotFound()
 	}
+}
+
+func SettingsWebauthnDeleteRepoFinishPost(c *context.Context) {
+	// Holds serialized representation
+	var reqBuf = &bytes.Buffer{}
+
+	// Serialize request to HTTP/1.1 wire format
+	if err := c.Req.Request.Write(reqBuf); err != nil {
+		c.Error(err, "delete repository finish")
+		return
+	}
+
+	err := db.DeleteRepositoryFinish(
+		c.User.ID,
+		c.Repo.Owner.ID,
+		c.Repo.Repository.ID,
+		reqBuf.Bytes())
+	if err != nil {
+		c.Error(err, "delete repository finish")
+		return
+	}
+
+	log.Trace("Repository deleted: %s/%s", c.Repo.Owner.Name, c.Repo.Repository.Name)
+
+	c.Flash.Success(c.Tr("repo.settings.deletion_success"))
+	c.Redirect(c.Repo.Owner.DashboardLink())
 }
 
 func SettingsAvatar(c *context.Context) {

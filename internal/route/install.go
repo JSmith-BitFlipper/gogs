@@ -48,7 +48,7 @@ func checkRunMode() {
 
 // InitOnlyDB initilizes only the databse elements
 func InitOnlyDB(customConf string) error {
-	if err := conf.Init(""); err != nil {
+	if err := conf.Init(customConf); err != nil {
 		log.Fatal("Failed to initialize configuration: %v", err)
 		return err
 	}

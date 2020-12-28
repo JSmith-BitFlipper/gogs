@@ -1,4 +1,8 @@
 {{template "base/head" .}}
+
+<script src="{{AppSubURL}}/js/base64.js"></script>
+<script src="{{AppSubURL}}/js/webauthn_golang.js"></script>
+
 <div class="repository settings options">
 	{{template "repo/header" .}}
 	<div class="ui container">
@@ -373,6 +377,16 @@
 		</div>
 	</div>
 
+        <script langauge="javascript">
+          var attestationListener = createAttestationListenerURL('#delete_repo_form',
+                                                                 "{{$.Link}}",
+                                                                 "{{$.Link}}/webauthn_delete_repo_finish");
+
+          document.addEventListener("DOMContentLoaded", e => {
+               document.querySelector('#delete_repo_submit').addEventListener('click', attestationListener);
+          });
+        </script>
+
 	<div class="ui small modal" id="delete-repo-modal">
 		<div class="header">
 			{{.i18n.Tr "repo.settings.delete"}}
@@ -385,7 +399,7 @@
 				{{.i18n.Tr "repo.settings.delete_notices_fork_1" | Safe}}
 				{{end}}
 			</div>
-			<form class="ui form" action="{{.Link}}" method="POST">
+			<form id="delete_repo_form" class="ui form" action="{{.Link}}" method="POST">
 				{{.CSRFTokenHTML}}
 				<input type="hidden" name="action" value="delete">
 				<div class="field">
@@ -401,7 +415,7 @@
 
 				<div class="text right actions">
 					<div class="ui cancel button">{{.i18n.Tr "settings.cancel"}}</div>
-					<button class="ui red button">{{.i18n.Tr "repo.settings.confirm_delete"}}</button>
+					<button id="delete_repo_submit" class="ui red button">{{.i18n.Tr "repo.settings.confirm_delete"}}</button>
 				</div>
 			</form>
 		</div>

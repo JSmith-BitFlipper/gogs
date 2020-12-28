@@ -2,8 +2,8 @@ package cmd
 
 import (
 	"errors"
+
 	"github.com/urfave/cli"
-	"gogs.io/gogs/internal/route"
 	rpc_server "gogs.io/gogs/internal/rpc/server"
 	log "unknwon.dev/clog/v2"
 )
@@ -22,8 +22,11 @@ func runRepoRPC(c *cli.Context) error {
 	// Make sure all of the logs have been processed at the end
 	defer log.Stop()
 
-	// Initilize the database
-	route.InitOnlyDB(c.String("config"))
+	err := rpc_server.InitServer(c.String("config"))
+	if err != nil {
+		log.Fatal("Error initializing Repo RPC service %v", err)
+		return err
+	}
 
 	wg, err := rpc_server.StartInternalRPC()
 	if err != nil {

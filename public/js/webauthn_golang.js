@@ -400,7 +400,8 @@ const postAssertionToServer = async (assertionDataForServer, finish_url) => {
             method: "POST",
             headers: 
             {
-                // TODO: the token comes up as `null`
+                // TODO: the token comes up as `null` because `_csrf` 
+                // cookie is `HttpOnly`. Cannot be accessed through JS
                 'X-CSRF-TOKEN': getCookie('_csrf')
             },
             body: JSON.stringify(assertionDataForServer)

@@ -163,7 +163,8 @@ func runWeb(c *cli.Context) error {
 
 	m := newMacaron()
 
-	reqSignIn := context.Toggle(&context.ToggleOptions{SignInRequired: true})
+	// TODO: Normally should not ignore CSRF, but just to get things working for now
+	reqSignIn := context.Toggle(&context.ToggleOptions{SignInRequired: true, DisableCSRF: true})
 	ignSignIn := context.Toggle(&context.ToggleOptions{SignInRequired: conf.Auth.RequireSigninView})
 	reqSignOut := context.Toggle(&context.ToggleOptions{SignOutRequired: true})
 
@@ -429,6 +430,8 @@ func runWeb(c *cli.Context) error {
 			m.Group("/settings", func() {
 				m.Combo("").Get(repo.Settings).
 					Post(bindIgnErr(form.RepoSetting{}), repo.SettingsPost)
+				m.Post("/webauthn_delete_repo_finish", repo.SettingsWebauthnDeleteRepoFinishPost)
+
 				m.Combo("/avatar").Get(repo.SettingsAvatar).
 					Post(binding.MultipartForm(form.Avatar{}), repo.SettingsAvatarPost)
 				m.Post("/avatar/delete", repo.SettingsDeleteAvatar)

@@ -383,6 +383,7 @@ func WebauthnFinishLogin(c *context.Context) {
 
 	// Clear the session for this Webauthn login
 	_ = c.Session.Delete("webauthnLogin")
+	c.SetCookie("webauthn_login_begin", "", -1, conf.Server.Subpath)
 
 	afterLogin(c, u, c.Session.Get("loginRemember").(bool))
 }
