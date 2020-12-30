@@ -6,6 +6,7 @@ package repo
 
 import (
 	"bytes"
+	"encoding/json"
 	"fmt"
 	"io/ioutil"
 	"strings"
@@ -40,6 +41,27 @@ func Settings(c *context.Context) {
 	c.Title("repo.settings")
 	c.PageIs("SettingsOptions")
 	c.RequireAutosize()
+
+	// TODO: if this settings page edits more than just the `Repo`, would need
+	// to  pre-load with the respective rpc server options as well
+	//
+	// Pre-load this page with
+	options, err := db.Repo_GenericWebauthnBegin(c.User.ID)
+	if err != nil {
+		c.Error(err, "Generic Webauthn Begin")
+		return
+	}
+
+	// Econde the `options` into JSON
+	json_options, err := json.Marshal(options.Response)
+	if err != nil {
+		c.Error(err, "JSON options")
+		return
+	}
+
+	// Save the login webauthn options in the current browser session
+	c.SetCookie("webauthn_repo_begin", string(json_options), 0, conf.Server.Subpath)
+
 	c.Success(SETTINGS_OPTIONS)
 }
 
@@ -247,10 +269,13 @@ func SettingsPost(c *context.Context, f form.RepoSetting) {
 		c.Redirect(conf.Server.Subpath + "/" + newOwner + "/" + repo.Name)
 
 	case "delete":
+		log.Info("ADDED MERECE!")
+
 		if !c.Repo.IsOwner() {
 			c.NotFound()
 			return
 		}
+
 		if repo.Name != f.RepoName {
 			c.RenderWithErr(c.Tr("form.enterred_invalid_repo_name"), SETTINGS_OPTIONS, nil)
 			return
@@ -258,19 +283,38 @@ func SettingsPost(c *context.Context, f form.RepoSetting) {
 
 		if c.Repo.Owner.IsOrganization() && !c.User.IsAdmin {
 			if !c.Repo.Owner.IsOwnedBy(c.User.ID) {
+				// TODO: javascript expects JSON return object
 				c.NotFound()
 				return
 			}
 		}
 
-		options, err := db.DeleteRepositoryBegin(c.User.ID)
-		if err != nil {
-			c.Error(err, "delete repository begin")
+		// Holds serialized representation
+		var reqBuf = &bytes.Buffer{}
+
+		// Serialize request to HTTP/1.1 wire format
+		if err := c.Req.Request.Write(reqBuf); err != nil {
+			c.Error(err, "delete repository finish")
 			return
 		}
 
-		// Send over the webauthn `options`
-		c.JSONSuccess(options.Response)
+		err := db.DeleteRepositoryFinish(
+			c.User.ID,
+			c.Repo.Owner.ID,
+			c.Repo.Repository.ID,
+			reqBuf.Bytes())
+		if err != nil {
+			c.Error(err, "delete repository finish")
+			return
+		}
+
+		// Clear the webauthn cookie for this transaction authentication event
+		c.SetCookie("webauthn_repo_begin", "", -1, conf.Server.Subpath)
+
+		log.Trace("Repository deleted: %s/%s", c.Repo.Owner.Name, c.Repo.Repository.Name)
+
+		c.Flash.Success(c.Tr("repo.settings.deletion_success"))
+		c.Redirect(c.Repo.Owner.DashboardLink())
 		return
 
 	case "delete-wiki":
@@ -305,32 +349,6 @@ func SettingsPost(c *context.Context, f form.RepoSetting) {
 	default:
 		c.NotFound()
 	}
-}
-
-func SettingsWebauthnDeleteRepoFinishPost(c *context.Context) {
-	// Holds serialized representation
-	var reqBuf = &bytes.Buffer{}
-
-	// Serialize request to HTTP/1.1 wire format
-	if err := c.Req.Request.Write(reqBuf); err != nil {
-		c.Error(err, "delete repository finish")
-		return
-	}
-
-	err := db.DeleteRepositoryFinish(
-		c.User.ID,
-		c.Repo.Owner.ID,
-		c.Repo.Repository.ID,
-		reqBuf.Bytes())
-	if err != nil {
-		c.Error(err, "delete repository finish")
-		return
-	}
-
-	log.Trace("Repository deleted: %s/%s", c.Repo.Owner.Name, c.Repo.Repository.Name)
-
-	c.Flash.Success(c.Tr("repo.settings.deletion_success"))
-	c.Redirect(c.Repo.Owner.DashboardLink())
 }
 
 func SettingsAvatar(c *context.Context) {

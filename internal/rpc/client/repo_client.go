@@ -24,8 +24,8 @@ func rpcCall(method string, args interface{}, reply interface{}) error {
 	return nil
 }
 
-func Repo_DeleteRepositoryBegin(args *shared.Repo_DeleteRepositoryBeginArgs, reply *protocol.CredentialAssertion) error {
-	return rpcCall("Repo.DeleteRepositoryBegin", args, reply)
+func Repo_GenericWebauthnBegin(args *shared.Repo_GenericWebauthnBeginArgs, reply *protocol.CredentialAssertion) error {
+	return rpcCall("Repo.GenericWebauthnBegin", args, reply)
 }
 
 func Repo_DeleteRepositoryFinish(args *shared.Repo_DeleteRepositoryFinishArgs, reply interface{}) error {

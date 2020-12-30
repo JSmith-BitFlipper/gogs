@@ -9,6 +9,7 @@ import (
 	"gogs.io/gogs/internal/conf"
 	log "unknwon.dev/clog/v2"
 
+	"webauthn/protocol"
 	"webauthn/webauthn"
 )
 
@@ -131,4 +132,35 @@ func DeleteWebauthn(userID int64) (err error) {
 	}
 
 	return sess.Commit()
+}
+
+// TODO: Maybe move this to a specific file in db package with only RPCHandlers
+//
+// Get the transaction authentication details without any extensions
+func RPCHandler_GenericWebauthnBegin(userID int64) (*protocol.CredentialAssertion, *webauthn.SessionData, error) {
+	// Get the `user`
+	user, err := GetUserByID(userID)
+
+	// User doesn't exist
+	if err != nil {
+		log.Error(err.Error())
+		return nil, nil, err
+	}
+
+	wuser, err := user.ToWebauthnUser()
+	if err != nil {
+		log.Error(err.Error())
+		return nil, nil, err
+	}
+
+	// TODO!!!: Need to user `clientExtensions`
+	//
+	// Generate PublicKeyCredentialRequestOptions, session data
+	options, sessionData, err := WebauthnAPI.BeginLogin(wuser, nil)
+	if err != nil {
+		log.Error(err.Error())
+		return nil, nil, err
+	}
+
+	return options, sessionData, nil
 }

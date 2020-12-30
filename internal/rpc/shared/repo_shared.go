@@ -1,6 +1,6 @@
 package rpc_shared
 
-type Repo_DeleteRepositoryBeginArgs struct {
+type Repo_GenericWebauthnBeginArgs struct {
 	UserID int64
 }
 

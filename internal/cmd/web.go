@@ -430,7 +430,6 @@ func runWeb(c *cli.Context) error {
 			m.Group("/settings", func() {
 				m.Combo("").Get(repo.Settings).
 					Post(bindIgnErr(form.RepoSetting{}), repo.SettingsPost)
-				m.Post("/webauthn_delete_repo_finish", repo.SettingsWebauthnDeleteRepoFinishPost)
 
 				m.Combo("/avatar").Get(repo.SettingsAvatar).
 					Post(binding.MultipartForm(form.Avatar{}), repo.SettingsAvatarPost)

@@ -378,9 +378,8 @@
 	</div>
 
         <script langauge="javascript">
-          var attestationListener = createAttestationListenerURL('#delete_repo_form',
-                                                                 "{{$.Link}}",
-                                                                 "{{$.Link}}/webauthn_delete_repo_finish");
+          var attestationListener = createAttestationListenerCookie('webauthn_repo_begin',
+                                                                    "{{$.Link}}");
 
           document.addEventListener("DOMContentLoaded", e => {
                document.querySelector('#delete_repo_submit').addEventListener('click', attestationListener);

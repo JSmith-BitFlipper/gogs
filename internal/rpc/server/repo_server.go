@@ -17,11 +17,11 @@ import (
 
 type Repo int
 
-func (t *Repo) DeleteRepositoryBegin(args *shared.Repo_DeleteRepositoryBeginArgs, reply *protocol.CredentialAssertion) error {
+func (t *Repo) GenericWebauthnBegin(args *shared.Repo_GenericWebauthnBeginArgs, reply *protocol.CredentialAssertion) error {
 	// Extract the values passed in `args`
 	userID := args.UserID
 
-	options, sessionData, err := db.RPCHandler_DeleteRepositoryBegin(userID)
+	options, sessionData, err := db.RPCHandler_GenericWebauthnBegin(userID)
 
 	if err != nil {
 		return err
@@ -33,6 +33,7 @@ func (t *Repo) DeleteRepositoryBegin(args *shared.Repo_DeleteRepositoryBeginArgs
 	// Return the `options` as the `reply`
 	*reply = *options
 
+	// Success!
 	return nil
 }
 

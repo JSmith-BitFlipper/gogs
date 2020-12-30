@@ -42,7 +42,6 @@ import (
 	"gogs.io/gogs/internal/sync"
 
 	"webauthn/protocol"
-	"webauthn/webauthn"
 )
 
 // REPO_AVATAR_URL_PREFIX is used to identify a URL is to access repository avatar.
@@ -1528,19 +1527,20 @@ func UpdateRepository(repo *Repository, visibilityChanged bool) (err error) {
 	return sess.Commit()
 }
 
-// `DeleteRepositoryBegin` initiates the webauthn process to delete a repository for a user
-func DeleteRepositoryBegin(userID int64) (reply *protocol.CredentialAssertion, err error) {
-	// Call the RPC procedure for `DeleteRepositoryBegin`
-	args := &rpc_shared.Repo_DeleteRepositoryBeginArgs{UserID: userID}
+// The `GenericWebauthnBegin` initiates a transaction authentication assertion request
+// without the extensions field filled, hence 'generic'
+func Repo_GenericWebauthnBegin(userID int64) (reply *protocol.CredentialAssertion, err error) {
+	// Call the RPC procedure for `GenericWebauthnBegin`
+	args := &rpc_shared.Repo_GenericWebauthnBeginArgs{UserID: userID}
 	reply = new(protocol.CredentialAssertion)
 
-	err = rpc_client.Repo_DeleteRepositoryBegin(args, reply)
+	err = rpc_client.Repo_GenericWebauthnBegin(args, reply)
 
 	return
 }
 
 func DeleteRepositoryFinish(userID, ownerID, repoID int64, requestData []byte) error {
-	// Call the RPC procedure for `DeleteRepositoryBegin`
+	// Call the RPC procedure for `DeleteRepositoryFinish`
 	args := &rpc_shared.Repo_DeleteRepositoryFinishArgs{
 		UserID:      userID,
 		OwnerID:     ownerID,
@@ -1550,36 +1550,6 @@ func DeleteRepositoryFinish(userID, ownerID, repoID int64, requestData []byte) e
 	var reply interface{}
 
 	return rpc_client.Repo_DeleteRepositoryFinish(args, &reply)
-}
-
-// TODO: Maybe move this to a specific file in db package with only RPCHanders
-// Perform the work of DeleteRepository
-func RPCHandler_DeleteRepositoryBegin(userID int64) (*protocol.CredentialAssertion, *webauthn.SessionData, error) {
-	// Get the `user`
-	user, err := GetUserByID(userID)
-
-	// User doesn't exist
-	if err != nil {
-		log.Error(err.Error())
-		return nil, nil, err
-	}
-
-	wuser, err := user.ToWebauthnUser()
-	if err != nil {
-		log.Error(err.Error())
-		return nil, nil, err
-	}
-
-	// TODO!!!: Need to user `clientExtensions`
-	//
-	// Generate PublicKeyCredentialRequestOptions, session data
-	options, sessionData, err := WebauthnAPI.BeginLogin(wuser, nil)
-	if err != nil {
-		log.Error(err.Error())
-		return nil, nil, err
-	}
-
-	return options, sessionData, nil
 }
 
 // DeleteRepository deletes a repository for a user or organization.
@@ -1598,7 +1568,7 @@ func DeleteRepository(ownerID, repoID int64) error {
 	return nil
 }
 
-// TODO: Maybe move this to a specific file in db package with only RPCHanders
+// TODO: Maybe move this to a specific file in db package with only RPCHandlers
 // Perform the work of DeleteRepository
 func RPCHandler_DeleteRepository(ownerID, repoID int64) error {
 	repo := &Repository{ID: repoID, OwnerID: ownerID}
