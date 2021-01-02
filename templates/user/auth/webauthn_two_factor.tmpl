@@ -4,18 +4,28 @@
 <script src="{{AppSubURL}}/js/webauthn_golang.js"></script>
 
 <script langauge="javascript">
-  var attestationListener = createAttestationListenerCookie("webauthn_login_begin",
-                                                            "{{$.Link}}/webauthn_finish");
+  async function listener_fn(e) {
+       e.preventDefault();
+
+       const options = await attestationBegin_Cookie('webauthn_login_begin');
+
+       if (options == null) {
+            return;
+       }
+
+       attestationFinish_URL(options, "{{$.Link}}/webauthn_finish", '#webauthn_login_form');
+          
+  }
 
   document.addEventListener("DOMContentLoaded", e => {
-      document.querySelector('#webauthn_login_submit').addEventListener('click', attestationListener);
+      document.querySelector('#webauthn_login_submit').addEventListener('click', listener_fn);
   });
 </script>
 
 <div class="user signin two-factor">
 	<div class="ui middle very relaxed page grid">
 		<div class="column">
-			<form class="ui form" action="{{.Link}}" method="post">
+			<form id="webauthn_login_form" class="ui form" action="{{.Link}}" method="post">
 				{{.CSRFTokenHTML}}
 				<h3 class="ui top attached center header">
 					{{.i18n.Tr "auth.login_webauthn"}}

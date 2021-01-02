@@ -195,7 +195,7 @@ func runWeb(c *cli.Context) error {
 				m.Combo("/two_factor_recovery_code").Get(user.LoginTwoFactorRecoveryCode).Post(user.LoginTwoFactorRecoveryCodePost)
 
 				// Webauthn login finish from cookie
-				m.Post("/webauthn_finish", user.WebauthnFinishLogin)
+				m.Post("/webauthn_finish", bindIgnErr(form.WebauthnDataForm{}), user.WebauthnFinishLogin)
 			})
 
 			m.Get("/sign_up", user.SignUp)

@@ -47,3 +47,11 @@ type Authentication struct {
 func (f *Authentication) Validate(ctx *macaron.Context, errs binding.Errors) binding.Errors {
 	return validate(errs, ctx.Data, f, ctx.Locale)
 }
+
+type WebauthnDataForm struct {
+	WebauthnData string
+}
+
+func (f *WebauthnDataForm) Validate(ctx *macaron.Context, errs binding.Errors) binding.Errors {
+	return validate(errs, ctx.Data, f, ctx.Locale)
+}

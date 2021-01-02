@@ -325,7 +325,7 @@ func webauthnBeginLogin(c *context.Context, u *db.User, remember bool) {
 	c.Success(WEBAUTHN_TWO_FACTOR)
 }
 
-func WebauthnFinishLogin(c *context.Context) {
+func WebauthnFinishLogin(c *context.Context, f form.WebauthnDataForm) {
 	// Load the `sessionData`
 	sessionData, ok := c.Session.Get("webauthnLogin").(webauthn.SessionData)
 	if !ok {
@@ -372,7 +372,7 @@ func WebauthnFinishLogin(c *context.Context) {
 	// TODO: In an actual implementation, we should perform additional checks on
 	// the returned 'credential', i.e. check 'credential.Authenticator.CloneWarning'
 	// and then increment the credentials counter
-	_, err = db.WebauthnAPI.FinishLogin(wuser, sessionData, noVerify, c.Req.Request)
+	_, err = db.WebauthnAPI.FinishLogin(wuser, sessionData, noVerify, f.WebauthnData)
 	if err != nil {
 		log.Error(err.Error())
 		// TODO: The render error does not work

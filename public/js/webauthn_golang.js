@@ -254,7 +254,7 @@ const attestationListenerHelper = async (form_id, begin_src, begin_type, finish_
     const transformedAssertionForServer = transformAssertionForServer(assertion);
 
     // POST the assertion to the server for verification.
-    const response = await postAssertionToServer(transformedAssertionForServer, finish_url);
+    const response = await postAssertionToServer(transformedAssertionForServer, finish_url, formData);
 
     // Go to the url in the `response`
     window.location.assign(response.url);
@@ -383,18 +383,6 @@ const transformNewAssertionForServer = (newAssertion) => {
  * @param {Object} credentialDataForServer 
  */
 const postNewAssertionToServer = async (formData, credentialDataForServer, finish_url) => {
-    // TODO: Clean up
-    // Object.entries(credentialDataForServer).forEach(([key, value]) => {
-    //     formData.set(key, value);
-    // });
-    
-    // return await fetch_json(
-    //     finish_url, 
-    //     {
-    //         method: "POST",
-    //         body: formData
-    //     });
-
     return await fetch_json(
         finish_url, 
         {

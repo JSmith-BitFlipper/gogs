@@ -72,7 +72,7 @@ func (t *Repo) DeleteRepositoryFinish(args *shared.Repo_DeleteRepositoryFinishAr
 	// TODO: In an actual implementation, we should perform additional checks on
 	// the returned 'credential', i.e. check 'credential.Authenticator.CloneWarning'
 	// and then increment the credentials counter
-	_, err = db.WebauthnAPI.FinishLogin_StringResponse(wuser, sessionData, noVerify, webauthnData)
+	_, err = db.WebauthnAPI.FinishLogin(wuser, sessionData, noVerify, webauthnData)
 	if err != nil {
 		log.Error(err.Error())
 		return err
