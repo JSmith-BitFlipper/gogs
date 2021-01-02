@@ -164,7 +164,7 @@ func runWeb(c *cli.Context) error {
 	m := newMacaron()
 
 	// TODO: Normally should not ignore CSRF, but just to get things working for now
-	reqSignIn := context.Toggle(&context.ToggleOptions{SignInRequired: true, DisableCSRF: true})
+	reqSignIn := context.Toggle(&context.ToggleOptions{SignInRequired: true})
 	ignSignIn := context.Toggle(&context.ToggleOptions{SignInRequired: conf.Auth.RequireSigninView})
 	reqSignOut := context.Toggle(&context.ToggleOptions{SignOutRequired: true})
 

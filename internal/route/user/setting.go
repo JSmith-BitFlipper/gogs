@@ -556,7 +556,6 @@ func SettingsWebauthnRegistrationFinish(c *context.Context) {
 	}
 
 	credential, err := db.WebauthnAPI.FinishRegistration(wuser, sessionData, c.Req.Request)
-	// ADDED credential, err := db.WebauthnAPI.FinishRegistration(wuser, sessionData, c.Req.Request)
 	if err != nil {
 		log.Error(err.Error())
 		c.JSON(http.StatusBadRequest, map[string]string{

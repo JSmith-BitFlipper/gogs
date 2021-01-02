@@ -197,83 +197,9 @@ const transformCredentialCreateOptions = (credentialCreateOptionsFromServer) => 
 
 
 /**
- * Callback executed after submitting login form
+ * Callback build blocks to be executed after submitting login form
  * @param {Event} e 
  */
-const attestationListenerHelper = async (form_id, begin_src, begin_type, finish_url, e) => {
-    e.preventDefault();
-
-    let credentialCreateOptionsFromServer;
-
-    switch(begin_type) {
-    case "url": {
-        // Gather the data in the form
-        const form = document.querySelector(form_id);
-        const formData = new FormData(form);
-
-        // POST the login data to the server to retrieve the `PublicKeyCredentialRequestOptions`
-        try {
-            credentialRequestOptionsFromServer = await getCredentialRequestOptionsFromServer(formData, begin_src);
-        } catch (err) {
-            alert("Error when getting request options from server: " + err);
-            window.location.reload(false);
-            return;
-        }
-        break;
-    }
-    case "cookie": {
-        credentialRequestOptionsFromServer = JSON.parse(decodeURIComponent(getCookie(begin_src)));
-        break;
-    }
-    default:
-        alert("Unknown begin_type: " + begin_type);
-        window.location.reload(false);
-        return;        
-    }
-
-    // Convert certain members of the PublicKeyCredentialRequestOptions into
-    // byte arrays as expected by the spec.    
-    const transformedCredentialRequestOptions = transformCredentialRequestOptions(
-        credentialRequestOptionsFromServer);
-
-    // Request the authenticator to create an assertion signature using the
-    // credential private key
-    let assertion;
-    try {
-        assertion = await navigator.credentials.get({
-            publicKey: transformedCredentialRequestOptions,
-        });
-    } catch (err) {
-        alert("Error when creating credential: " + err);
-        window.location.reload(false);
-        return;
-    }
-
-    // We now have an authentication assertion! encode the byte arrays contained
-    // in the assertion data as strings for posting to the server
-    const transformedAssertionForServer = transformAssertionForServer(assertion);
-
-    // POST the assertion to the server for verification.
-    const response = await postAssertionToServer(transformedAssertionForServer, finish_url, formData);
-
-    // Go to the url in the `response`
-    window.location.assign(response.url);
-
-    // let response;
-    // try {
-    //     response = await postAssertionToServer(transformedAssertionForServer, finish_url);
-    // } catch (err) {
-    //     alert("Error when validating assertion on server: " + err);
-    //     window.location.reload(false);
-    //     return;
-    // }
-
-    // alert("Succesfully attestated request!");
-
-    // console.warn("Redirecting to: " + response.nexturl);
-
-};
-
 const attestationBegin_URL = async (form_id, begin_url) => {
     // Gather the data in the form
     const form = document.querySelector(form_id);
@@ -335,25 +261,6 @@ const attestationFinish_URL = async (credentialRequestOptionsFromServer, finish_
     window.location.assign(response.url);
 }
 
-// TODO: RM these functions and use the building block functions above
-const createAttestationListenerURL = (form_id, begin_url, finish_url) => {
-    async function listener_fn(e) {
-        // TODO: Make string "url" to constant variable
-        return attestationListenerHelper(form_id, begin_url, "url", finish_url, e);
-    }
-
-    return listener_fn;
-}
-
-const createAttestationListenerCookie = (begin_cookie_name, finish_url) => {
-    async function listener_fn(e) {
-        // TODO: Make string "cookie" to constant variable
-        return attestationListenerHelper("", begin_cookie_name, "cookie", finish_url, e);
-    }
-
-    return listener_fn;
-}
-
 /**
  * Transforms the binary data in the credential into base64 strings
  * for posting to the server.
@@ -389,7 +296,6 @@ const postNewAssertionToServer = async (formData, credentialDataForServer, finis
             method: "POST",
             headers: 
             {
-                // TODO: Is `formData` necessary here
                 'X-CSRF-TOKEN': formData.get('_csrf')
             },
             body: JSON.stringify(credentialDataForServer)
@@ -430,11 +336,6 @@ const postAssertionToServer = async (assertionDataForServer, finish_url, formDat
         finish_url,
         {
             method: "POST",
-            headers: 
-            {
-                // TODO: Is `formData` necessary here
-                'X-CSRF-TOKEN': getCookie('_csrf')
-            },
             body: formData
         }
     );
