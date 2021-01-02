@@ -5,7 +5,6 @@
 package repo
 
 import (
-	"bytes"
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
@@ -269,8 +268,6 @@ func SettingsPost(c *context.Context, f form.RepoSetting) {
 		c.Redirect(conf.Server.Subpath + "/" + newOwner + "/" + repo.Name)
 
 	case "delete":
-		log.Info("ADDED MERECE!")
-
 		if !c.Repo.IsOwner() {
 			c.NotFound()
 			return
@@ -289,20 +286,11 @@ func SettingsPost(c *context.Context, f form.RepoSetting) {
 			}
 		}
 
-		// Holds serialized representation
-		var reqBuf = &bytes.Buffer{}
-
-		// Serialize request to HTTP/1.1 wire format
-		if err := c.Req.Request.Write(reqBuf); err != nil {
-			c.Error(err, "delete repository finish")
-			return
-		}
-
 		err := db.DeleteRepositoryFinish(
 			c.User.ID,
 			c.Repo.Owner.ID,
 			c.Repo.Repository.ID,
-			reqBuf.Bytes())
+			f.WebauthnData)
 		if err != nil {
 			c.Error(err, "delete repository finish")
 			return

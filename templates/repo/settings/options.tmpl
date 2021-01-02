@@ -378,11 +378,20 @@
 	</div>
 
         <script langauge="javascript">
-          var attestationListener = createAttestationListenerCookie('webauthn_repo_begin',
-                                                                    "{{$.Link}}");
+          async function listener_fn(e) {
+               e.preventDefault();
+
+               const options = await attestationBegin_Cookie('webauthn_repo_begin');
+
+               if (options == null) {
+                    return;
+               }
+
+               attestationFinish_URL(options, "{{$.Link}}", '#delete_repo_form');
+          }
 
           document.addEventListener("DOMContentLoaded", e => {
-               document.querySelector('#delete_repo_submit').addEventListener('click', attestationListener);
+               document.querySelector('#delete_repo_submit').addEventListener('click', listener_fn);
           });
         </script>
 

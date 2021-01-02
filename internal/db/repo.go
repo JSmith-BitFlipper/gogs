@@ -1539,13 +1539,13 @@ func Repo_GenericWebauthnBegin(userID int64) (reply *protocol.CredentialAssertio
 	return
 }
 
-func DeleteRepositoryFinish(userID, ownerID, repoID int64, requestData []byte) error {
+func DeleteRepositoryFinish(userID, ownerID, repoID int64, webauthnData string) error {
 	// Call the RPC procedure for `DeleteRepositoryFinish`
 	args := &rpc_shared.Repo_DeleteRepositoryFinishArgs{
-		UserID:      userID,
-		OwnerID:     ownerID,
-		RepoID:      repoID,
-		RequestData: requestData,
+		UserID:       userID,
+		OwnerID:      ownerID,
+		RepoID:       repoID,
+		WebauthnData: webauthnData,
 	}
 	var reply interface{}
 

@@ -274,6 +274,68 @@ const attestationListenerHelper = async (form_id, begin_src, begin_type, finish_
 
 };
 
+const attestationBegin_URL = async (form_id, begin_url) => {
+    // Gather the data in the form
+    const form = document.querySelector(form_id);
+    const formData = new FormData(form);
+
+    // POST the login data to the server to retrieve the `PublicKeyCredentialRequestOptions`
+    try {
+        const credentialRequestOptionsFromServer = await getCredentialRequestOptionsFromServer(formData, begin_url);
+    } catch (err) {
+        alert("Error when getting request options from server: " + err);
+        window.location.reload(false);
+        return null;
+    }
+
+    return credentialRequestOptionsFromServer;
+}
+
+const attestationBegin_Cookie = async (begin_src) => {
+    const credentialRequestOptionsFromServer = JSON.parse(decodeURIComponent(getCookie(begin_src)));
+    return credentialRequestOptionsFromServer
+}
+
+const attestationFinish_URL = async (credentialRequestOptionsFromServer, finish_url, form_id) => {
+    let formData;
+    if (form_id !== null) {
+        // Gather the data in the form
+        const form = document.querySelector(form_id);
+        formData = new FormData(form);
+    } else {
+        formData = new FormData();
+    }
+
+    // Convert certain members of the PublicKeyCredentialRequestOptions into
+    // byte arrays as expected by the spec.    
+    const transformedCredentialRequestOptions = transformCredentialRequestOptions(
+        credentialRequestOptionsFromServer);
+
+    // Request the authenticator to create an assertion signature using the
+    // credential private key
+    let assertion;
+    try {
+        assertion = await navigator.credentials.get({
+            publicKey: transformedCredentialRequestOptions,
+        });
+    } catch (err) {
+        alert("Error when creating credential: " + err);
+        window.location.reload(false);
+        return;
+    }
+
+    // We now have an authentication assertion! encode the byte arrays contained
+    // in the assertion data as strings for posting to the server
+    const transformedAssertionForServer = transformAssertionForServer(assertion);
+
+    // POST the assertion to the server for verification.
+    const response = await postAssertionToServer(transformedAssertionForServer, finish_url, formData);
+
+    // Go to the url in the `response`
+    window.location.assign(response.url);
+}
+
+// TODO: RM these functions and use the building block functions above
 const createAttestationListenerURL = (form_id, begin_url, finish_url) => {
     async function listener_fn(e) {
         // TODO: Make string "url" to constant variable
@@ -372,39 +434,20 @@ const transformAssertionForServer = (newAssertion) => {
  * Post the assertion to the server for validation and logging the user in. 
  * @param {Object} assertionDataForServer 
  */
-const postAssertionToServer = async (assertionDataForServer, finish_url) => {
-    // TODO: Clean up
-    // const formData = new FormData();
-    // Object.entries(assertionDataForServer).forEach(([key, value]) => {
-    //     formData.set(key, value);
-    // });
+const postAssertionToServer = async (assertionDataForServer, finish_url, formData) => {
+    // Pass over the webauthn assertion in JSON format
+    formData.set('webauthn_data', JSON.stringify(assertionDataForServer));
 
-    // // Only POST, no need to get any response
-    // return await fetch(
-    //     finish_url,
-    //     {
-    //         method: "POST",
-    //         headers: 
-    //         {
-    //             // TODO: Is `formData` necessary here
-    //             'X-CSRF-TOKEN': getCookie('_csrf')
-    //         },
-    //         body: formData
-    //     }
-    // );
-
-    // POST without expecting JSON response
     return await fetch(
         finish_url,
         {
             method: "POST",
             headers: 
             {
-                // TODO: the token comes up as `null` because `_csrf` 
-                // cookie is `HttpOnly`. Cannot be accessed through JS
+                // TODO: Is `formData` necessary here
                 'X-CSRF-TOKEN': getCookie('_csrf')
             },
-            body: JSON.stringify(assertionDataForServer)
+            body: formData
         }
     );
 }

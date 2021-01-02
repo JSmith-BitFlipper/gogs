@@ -1,11 +1,8 @@
 package rpc_server
 
 import (
-	"bufio"
-	"bytes"
 	"errors"
 	"fmt"
-	"net/http"
 
 	log "unknwon.dev/clog/v2"
 
@@ -42,7 +39,7 @@ func (t *Repo) DeleteRepositoryFinish(args *shared.Repo_DeleteRepositoryFinishAr
 	userID := args.UserID
 	ownerID := args.OwnerID
 	repoID := args.RepoID
-	requestData := args.RequestData
+	webauthnData := args.WebauthnData
 
 	// Load the `sessionData`
 	sessionData, exists := sessionMap[userID]
@@ -65,14 +62,6 @@ func (t *Repo) DeleteRepositoryFinish(args *shared.Repo_DeleteRepositoryFinishAr
 		return err
 	}
 
-	// Deserialize the `requestData`
-	reqReader := bufio.NewReader(bytes.NewBuffer(requestData))
-	request, err := http.ReadRequest(reqReader)
-	if err != nil {
-		log.Error(err.Error())
-		return err
-	}
-
 	// TODO!!!: This needs actual verification here
 	//
 	// There are no extensions to verify during login authentication
@@ -83,7 +72,7 @@ func (t *Repo) DeleteRepositoryFinish(args *shared.Repo_DeleteRepositoryFinishAr
 	// TODO: In an actual implementation, we should perform additional checks on
 	// the returned 'credential', i.e. check 'credential.Authenticator.CloneWarning'
 	// and then increment the credentials counter
-	_, err = db.WebauthnAPI.FinishLogin(wuser, sessionData, noVerify, request)
+	_, err = db.WebauthnAPI.FinishLogin_StringResponse(wuser, sessionData, noVerify, webauthnData)
 	if err != nil {
 		log.Error(err.Error())
 		return err

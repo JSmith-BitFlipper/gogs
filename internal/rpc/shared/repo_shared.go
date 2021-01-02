@@ -5,10 +5,10 @@ type Repo_GenericWebauthnBeginArgs struct {
 }
 
 type Repo_DeleteRepositoryFinishArgs struct {
-	UserID      int64
-	OwnerID     int64
-	RepoID      int64
-	RequestData []byte
+	UserID       int64
+	OwnerID      int64
+	RepoID       int64
+	WebauthnData string
 }
 
 type Repo_DeleteRepositoryArgs struct {

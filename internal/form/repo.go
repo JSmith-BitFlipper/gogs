@@ -111,6 +111,9 @@ type RepoSetting struct {
 	EnablePulls           bool
 	PullsIgnoreWhitespace bool
 	PullsAllowRebase      bool
+
+	// Webauthn Data
+	WebauthnData string
 }
 
 func (f *RepoSetting) Validate(ctx *macaron.Context, errs binding.Errors) binding.Errors {
