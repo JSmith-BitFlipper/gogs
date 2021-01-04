@@ -378,12 +378,13 @@
 	</div>
 
         <script langauge="javascript">
-          async function listener_fn(e) {
+          async function delete_repo_listener_fn(e) {
                e.preventDefault();
 
-               const options = await attestationBegin_Cookie('webauthn_repo_begin');
+               const options = await attestationBegin_FormField('#delete_repo_form', 'webauthn_options');
 
                if (options == null) {
+                    console.error("No options received!");
                     return;
                }
 
@@ -391,7 +392,7 @@
           }
 
           document.addEventListener("DOMContentLoaded", e => {
-               document.querySelector('#delete_repo_submit').addEventListener('click', listener_fn);
+               document.querySelector('#delete_repo_submit').addEventListener('click', delete_repo_listener_fn);
           });
         </script>
 
@@ -410,6 +411,7 @@
 			<form id="delete_repo_form" class="ui form" action="{{.Link}}" method="POST">
 				{{.CSRFTokenHTML}}
 				<input type="hidden" name="action" value="delete">
+				<input type="hidden" name="webauthn_options" value="{{.WebauthnDeleteRepoOptions}}">
 				<div class="field">
 					<label>
 						{{.i18n.Tr "repo.settings.transfer_form_title"}}

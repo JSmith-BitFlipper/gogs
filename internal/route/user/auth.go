@@ -365,8 +365,8 @@ func WebauthnFinishLogin(c *context.Context, f form.WebauthnDataForm) {
 	}
 
 	// There are no extensions to verify during login authentication
-	var noVerify protocol.ExtensionsVerifier = func(_, _ protocol.AuthenticationExtensions) bool {
-		return true
+	var noVerify protocol.ExtensionsVerifier = func(_, _ protocol.AuthenticationExtensions) error {
+		return nil
 	}
 
 	// TODO: In an actual implementation, we should perform additional checks on

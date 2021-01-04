@@ -23,6 +23,8 @@ import (
 	"gogs.io/gogs/internal/form"
 	"gogs.io/gogs/internal/osutil"
 	"gogs.io/gogs/internal/tool"
+
+	"webauthn/protocol"
 )
 
 const (
@@ -44,22 +46,29 @@ func Settings(c *context.Context) {
 	// TODO: if this settings page edits more than just the `Repo`, would need
 	// to  pre-load with the respective rpc server options as well
 	//
-	// Pre-load this page with
+	// Create a generic options object for the Repo RPC server
 	options, err := db.Repo_GenericWebauthnBegin(c.User.ID)
 	if err != nil {
 		c.Error(err, "Generic Webauthn Begin")
 		return
 	}
 
-	// Econde the `options` into JSON
-	json_options, err := json.Marshal(options.Response)
+	// Make a copy of the `options` for the delete repository operation
+	delete_repo_options := options
+	delete_repo_options.Response.Extensions = protocol.AuthenticationExtensions{
+		"txAuthSimple": fmt.Sprintf("Confirm deletion of repository: %s",
+			c.Repo.Repository.FullName()),
+	}
+
+	// Encode the `options` into JSON
+	json_delete_repo_options, err := json.Marshal(delete_repo_options.Response)
 	if err != nil {
 		c.Error(err, "JSON options")
 		return
 	}
 
-	// Save the login webauthn options in the current browser session
-	c.SetCookie("webauthn_repo_begin", string(json_options), 0, conf.Server.Subpath)
+	// Save the webauthn options for deleting the repository in the delete form
+	c.Data["WebauthnDeleteRepoOptions"] = string(json_delete_repo_options)
 
 	c.Success(SETTINGS_OPTIONS)
 }
@@ -289,15 +298,12 @@ func SettingsPost(c *context.Context, f form.RepoSetting) {
 		err := db.DeleteRepositoryFinish(
 			c.User.ID,
 			c.Repo.Owner.ID,
-			c.Repo.Repository.ID,
+			repo.ID,
 			f.WebauthnData)
 		if err != nil {
 			c.Error(err, "delete repository finish")
 			return
 		}
-
-		// Clear the webauthn cookie for this transaction authentication event
-		c.SetCookie("webauthn_repo_begin", "", -1, conf.Server.Subpath)
 
 		log.Trace("Repository deleted: %s/%s", c.Repo.Owner.Name, c.Repo.Repository.Name)
 

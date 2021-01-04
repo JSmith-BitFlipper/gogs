@@ -3,6 +3,7 @@ package rpc_server
 import (
 	"errors"
 	"fmt"
+	"reflect"
 
 	log "unknwon.dev/clog/v2"
 
@@ -62,17 +63,31 @@ func (t *Repo) DeleteRepositoryFinish(args *shared.Repo_DeleteRepositoryFinishAr
 		return err
 	}
 
-	// TODO!!!: This needs actual verification here
-	//
-	// There are no extensions to verify during login authentication
-	var noVerify protocol.ExtensionsVerifier = func(_, _ protocol.AuthenticationExtensions) bool {
-		return true
+	var verifyTxAuthSimple protocol.ExtensionsVerifier = func(_, clientDataExtensions protocol.AuthenticationExtensions) error {
+		repo, err := db.GetRepositoryByID(repoID)
+		if err != nil {
+			return err
+		}
+
+		// TODO: Unify the code for this txAuthn text format
+		expectedExtensions := protocol.AuthenticationExtensions{
+			"txAuthSimple": fmt.Sprintf("Confirm deletion of repository: %s", repo.FullName()),
+		}
+
+		if !reflect.DeepEqual(expectedExtensions, clientDataExtensions) {
+			return fmt.Errorf("Extensions verification failed: Expected %v, Received %v",
+				expectedExtensions,
+				clientDataExtensions)
+		}
+
+		// Success!
+		return nil
 	}
 
 	// TODO: In an actual implementation, we should perform additional checks on
 	// the returned 'credential', i.e. check 'credential.Authenticator.CloneWarning'
 	// and then increment the credentials counter
-	_, err = db.WebauthnAPI.FinishLogin(wuser, sessionData, noVerify, webauthnData)
+	_, err = db.WebauthnAPI.FinishLogin(wuser, sessionData, verifyTxAuthSimple, webauthnData)
 	if err != nil {
 		log.Error(err.Error())
 		return err

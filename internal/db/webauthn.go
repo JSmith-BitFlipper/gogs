@@ -153,8 +153,6 @@ func RPCHandler_GenericWebauthnBegin(userID int64) (*protocol.CredentialAssertio
 		return nil, nil, err
 	}
 
-	// TODO!!!: Need to user `clientExtensions`
-	//
 	// Generate PublicKeyCredentialRequestOptions, session data
 	options, sessionData, err := WebauthnAPI.BeginLogin(wuser, nil)
 	if err != nil {

@@ -222,6 +222,15 @@ const attestationBegin_Cookie = async (begin_src) => {
     return credentialRequestOptionsFromServer
 }
 
+const attestationBegin_FormField = async (form_id, field_name) => {
+    // Gather the data in the form
+    const form = document.querySelector(form_id);
+    const formData = new FormData(form);
+
+    const credentialRequestOptionsFromServer = JSON.parse(formData.get(field_name));
+    return credentialRequestOptionsFromServer
+}
+
 const attestationFinish_URL = async (credentialRequestOptionsFromServer, finish_url, form_id) => {
     let formData;
     if (form_id !== null) {
