@@ -381,14 +381,15 @@
           async function delete_repo_listener_fn(e) {
                e.preventDefault();
 
-               const options = await attestationBegin_FormField('#delete_repo_form', 'webauthn_options');
-
-               if (options == null) {
-                    console.error("No options received!");
+               let options;
+               try {
+                    options = await attestationBegin_FormField('#delete_repo_form', 'webauthn_options');
+                    attestationFinish_URL(options, "{{$.Link}}", '#delete_repo_form');
+               } catch (err) {
+                    alert("Error authenticating: " + err);
+                    window.location.reload(false);
                     return;
                }
-
-               attestationFinish_URL(options, "{{$.Link}}", '#delete_repo_form');
           }
 
           document.addEventListener("DOMContentLoaded", e => {

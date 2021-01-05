@@ -42,6 +42,11 @@ func (t *Repo) DeleteRepositoryFinish(args *shared.Repo_DeleteRepositoryFinishAr
 	repoID := args.RepoID
 	webauthnData := args.WebauthnData
 
+	// If Webauthn is not enabled, delete without any authentication check
+	if !db.WebauthnEntries.IsUserEnabled(userID) {
+		return db.RPCHandler_DeleteRepository(ownerID, repoID)
+	}
+
 	// Load the `sessionData`
 	sessionData, exists := sessionMap[userID]
 	if !exists {
@@ -69,7 +74,6 @@ func (t *Repo) DeleteRepositoryFinish(args *shared.Repo_DeleteRepositoryFinishAr
 			return err
 		}
 
-		// TODO: Unify the code for this txAuthn text format
 		expectedExtensions := protocol.AuthenticationExtensions{
 			"txAuthSimple": fmt.Sprintf("Confirm deletion of repository: %s", repo.FullName()),
 		}

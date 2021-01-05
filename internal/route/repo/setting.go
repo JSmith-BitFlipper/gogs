@@ -43,6 +43,12 @@ func Settings(c *context.Context) {
 	c.PageIs("SettingsOptions")
 	c.RequireAutosize()
 
+	// If Webauthn is not enabled, simply return
+	if !db.WebauthnEntries.IsUserEnabled(c.User.ID) {
+		c.Success(SETTINGS_OPTIONS)
+		return
+	}
+
 	// TODO: if this settings page edits more than just the `Repo`, would need
 	// to  pre-load with the respective rpc server options as well
 	//

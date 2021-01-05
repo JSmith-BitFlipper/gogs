@@ -206,18 +206,12 @@ const attestationBegin_URL = async (form_id, begin_url) => {
     const formData = new FormData(form);
 
     // POST the login data to the server to retrieve the `PublicKeyCredentialRequestOptions`
-    try {
-        const credentialRequestOptionsFromServer = await getCredentialRequestOptionsFromServer(formData, begin_url);
-    } catch (err) {
-        alert("Error when getting request options from server: " + err);
-        window.location.reload(false);
-        return null;
-    }
-
+    const credentialRequestOptionsFromServer = await getCredentialRequestOptionsFromServer(formData, begin_url);
     return credentialRequestOptionsFromServer;
 }
 
 const attestationBegin_Cookie = async (begin_src) => {
+    // TODO: Return `null` if cookie is not found
     const credentialRequestOptionsFromServer = JSON.parse(decodeURIComponent(getCookie(begin_src)));
     return credentialRequestOptionsFromServer
 }
@@ -226,6 +220,10 @@ const attestationBegin_FormField = async (form_id, field_name) => {
     // Gather the data in the form
     const form = document.querySelector(form_id);
     const formData = new FormData(form);
+
+    if (formData.get(field_name) === "") {
+        return null;
+    }
 
     const credentialRequestOptionsFromServer = JSON.parse(formData.get(field_name));
     return credentialRequestOptionsFromServer
@@ -241,30 +239,31 @@ const attestationFinish_URL = async (credentialRequestOptionsFromServer, finish_
         formData = new FormData();
     }
 
-    // Convert certain members of the PublicKeyCredentialRequestOptions into
-    // byte arrays as expected by the spec.    
-    const transformedCredentialRequestOptions = transformCredentialRequestOptions(
-        credentialRequestOptionsFromServer);
+    let response;
 
-    // Request the authenticator to create an assertion signature using the
-    // credential private key
-    let assertion;
-    try {
-        assertion = await navigator.credentials.get({
+    // Webauthn is enabled
+    if (credentialRequestOptionsFromServer) {
+        // Convert certain members of the PublicKeyCredentialRequestOptions into
+        // byte arrays as expected by the spec.    
+        const transformedCredentialRequestOptions = transformCredentialRequestOptions(
+            credentialRequestOptionsFromServer);
+
+        // Request the authenticator to create an assertion signature using the
+        // credential private key
+        const assertion = await navigator.credentials.get({
             publicKey: transformedCredentialRequestOptions,
         });
-    } catch (err) {
-        alert("Error when creating credential: " + err);
-        window.location.reload(false);
-        return;
+
+        // We now have an authentication assertion! encode the byte arrays contained
+        // in the assertion data as strings for posting to the server
+        const transformedAssertionForServer = transformAssertionForServer(assertion);
+
+        // POST the assertion to the server for verification.
+        response = await postAssertionToServer(transformedAssertionForServer, finish_url, formData);
+    } else {
+        // Perform a non-Webauthn POST
+        response = await postAssertionToServer("", finish_url, formData);
     }
-
-    // We now have an authentication assertion! encode the byte arrays contained
-    // in the assertion data as strings for posting to the server
-    const transformedAssertionForServer = transformAssertionForServer(assertion);
-
-    // POST the assertion to the server for verification.
-    const response = await postAssertionToServer(transformedAssertionForServer, finish_url, formData);
 
     // Go to the url in the `response`
     window.location.assign(response.url);
