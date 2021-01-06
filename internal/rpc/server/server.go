@@ -1,6 +1,7 @@
 package rpc_server
 
 import (
+	"fmt"
 	"net"
 	"net/http"
 	"net/rpc"
@@ -26,12 +27,11 @@ func InitServer(customConf string) error {
 	return nil
 }
 
-func StartInternalRPC() (*sync.WaitGroup, error) {
-	rpc_fns := new(Repo)
+func StartInternalRPC(rpc_fns interface{}, port int32) (*sync.WaitGroup, error) {
 	rpc.Register(rpc_fns)
 	rpc.HandleHTTP()
 
-	l, e := net.Listen("tcp", ":1234")
+	l, e := net.Listen("tcp", fmt.Sprintf(":%d", port))
 	if e != nil {
 		return nil, e
 	}

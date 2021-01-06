@@ -17,9 +17,22 @@ and it takes care of all the other things for you`,
 	},
 }
 
+func launchProcess(args []string, procAttr *os.ProcAttr, processes *[]*os.Process) error {
+	// Start up the process
+	p, err := os.StartProcess(args[0], args, procAttr)
+
+	if err != nil {
+		return err
+	}
+
+	*processes = append(*processes, p)
+
+	// Success!
+	return nil
+}
+
 func runLauncher(c *cli.Context) (err error) {
 	var args []string
-	var p *os.Process
 	var processes []*os.Process
 
 	var procAttr os.ProcAttr
@@ -27,28 +40,25 @@ func runLauncher(c *cli.Context) (err error) {
 
 	// Start up the RPC servers
 	args = []string{"./gogs", "repo_rpc"}
-	p, err = os.StartProcess(args[0], args, &procAttr)
-
-	if err != nil {
+	if err := launchProcess(args, &procAttr, &processes); err != nil {
 		return err
 	}
 
-	processes = append(processes, p)
+	args = []string{"./gogs", "webauthn_rpc"}
+	if err := launchProcess(args, &procAttr, &processes); err != nil {
+		return err
+	}
 
 	// Pass the `port` and `config` args through to the web server
 	args = []string{"./gogs", "web", "--port", c.String("port"), "--config", c.String("config")}
-	p, err = os.StartProcess(args[0], args, &procAttr)
-
-	if err != nil {
+	if err := launchProcess(args, &procAttr, &processes); err != nil {
 		return err
 	}
 
-	processes = append(processes, p)
-
-	// TODO: In theory, this is just a starter process that should disapear after
+	// In theory, this is just a starter process that should disapear after
 	// setting everything up. I keep this here to capture Ctrl-C kill
 	// using for loop
-	for _, p = range processes {
+	for _, p := range processes {
 		p.Wait()
 	}
 	return nil

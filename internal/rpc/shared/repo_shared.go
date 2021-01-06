@@ -1,5 +1,7 @@
 package rpc_shared
 
+const REPO_RPC_PORT = 1234
+
 type Repo_GenericWebauthnBeginArgs struct {
 	UserID int64
 }

@@ -7,6 +7,7 @@ package user
 import (
 	"bytes"
 	"encoding/base64"
+	"encoding/json"
 	"fmt"
 	"html/template"
 	"image/png"
@@ -29,6 +30,7 @@ import (
 	"gogs.io/gogs/internal/form"
 	"gogs.io/gogs/internal/tool"
 
+	"webauthn/protocol"
 	"webauthn/webauthn"
 )
 
@@ -392,7 +394,34 @@ func SettingsSecurity(c *context.Context) {
 	}
 	c.Data["TwoFactor"] = t
 
-	c.Data["Webauthn"] = c.User.IsEnabledWebauthn()
+	webauthnEnabled := c.User.IsEnabledWebauthn()
+	c.Data["Webauthn"] = webauthnEnabled
+
+	// Pre-load the Webauthn disable options if Webauthn is already enabled
+	if webauthnEnabled {
+		// Create a generic options object for the Repo RPC server
+		options, err := db.Webauthn_GenericWebauthnBegin(c.User.ID)
+		if err != nil {
+			c.Error(err, "Generic Webauthn Begin")
+			return
+		}
+
+		// Make a copy of the `options` for the delete repository operation
+		delete_repo_options := options
+		delete_repo_options.Response.Extensions = protocol.AuthenticationExtensions{
+			"txAuthSimple": fmt.Sprintf("Disable Webauthn for: %s", c.User.Name),
+		}
+
+		// Encode the `options` into JSON
+		json_delete_repo_options, err := json.Marshal(delete_repo_options.Response)
+		if err != nil {
+			c.Error(err, "JSON options")
+			return
+		}
+
+		// Save the webauthn options for deleting the repository in the delete form
+		c.Data["WebauthnDisableOptions"] = string(json_delete_repo_options)
+	}
 
 	c.Success(SETTINGS_SECURITY)
 }

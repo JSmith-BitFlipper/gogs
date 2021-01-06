@@ -37,6 +37,7 @@ func main() {
 		cmd.Backup,
 		cmd.Restore,
 		cmd.RepoRPC,
+		cmd.WebauthnRPC,
 	}
 	if err := app.Run(os.Args); err != nil {
 		log.Fatal("Failed to start application: %v", err)

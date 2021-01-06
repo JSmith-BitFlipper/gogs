@@ -104,6 +104,7 @@ func (t *Repo) DeleteRepositoryFinish(args *shared.Repo_DeleteRepositoryFinishAr
 	return db.RPCHandler_DeleteRepository(ownerID, repoID)
 }
 
+// TODO: This function should not exist and all of the delete repository action should occur through the DeleteRpositoryFinish function above
 func (t *Repo) DeleteRepository(args *shared.Repo_DeleteRepositoryArgs, reply *interface{}) error {
 	// Extract the values passed in `args`
 	repoID := args.RepoID

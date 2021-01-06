@@ -7,6 +7,8 @@ import (
 	"time"
 
 	"gogs.io/gogs/internal/conf"
+	rpc_client "gogs.io/gogs/internal/rpc/client"
+	rpc_shared "gogs.io/gogs/internal/rpc/shared"
 	log "unknwon.dev/clog/v2"
 
 	"webauthn/protocol"
@@ -132,6 +134,18 @@ func DeleteWebauthn(userID int64) (err error) {
 	}
 
 	return sess.Commit()
+}
+
+// The `GenericWebauthnBegin` initiates a transaction authentication assertion request
+// without the extensions field filled, hence 'generic'
+func Webauthn_GenericWebauthnBegin(userID int64) (reply *protocol.CredentialAssertion, err error) {
+	// Call the RPC procedure for `GenericWebauthnBegin`
+	args := &rpc_shared.Webauthn_GenericWebauthnBeginArgs{UserID: userID}
+	reply = new(protocol.CredentialAssertion)
+
+	err = rpc_client.Webauthn_GenericWebauthnBegin(args, reply)
+
+	return
 }
 
 // TODO: Maybe move this to a specific file in db package with only RPCHandlers

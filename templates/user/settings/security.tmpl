@@ -28,18 +28,22 @@
 				<h4 class="ui top attached header">
                                   {{.i18n.Tr "settings.webauthn_two_factor"}}
 				</h4>
-				<div class="ui attached segment two-factor">
-					<p class="text bold">
-						{{.i18n.Tr "settings.two_factor_status"}}
-						{{if .Webauthn}}
-							<span class="text green">{{.i18n.Tr "settings.two_factor_on"}} <i class="octicon octicon-check"></i></span>
-							<button class="ui right mini red toggle button delete-button" data-url="{{$.Link}}/webauthn_two_factor_disable">{{.i18n.Tr "settings.two_factor_disable"}}</button>
-						{{else}}
-							<span class="text red">{{.i18n.Tr "settings.two_factor_off"}} <i class="octicon octicon-x"></i></span>
-							<a class="ui right mini green toggle button" href="{{AppSubURL}}/user/settings/security/webauthn_two_factor_enable">{{.i18n.Tr "settings.two_factor_enable"}}</a>
-						{{end}}
-					</p>
-				</div>
+			        <form id="webauthn_toggle_form">
+				  <div class="ui attached segment two-factor">
+				    <p class="text bold">
+				      {{.i18n.Tr "settings.two_factor_status"}}
+				      {{if .Webauthn}}
+				        <span class="text green">{{.i18n.Tr "settings.two_factor_on"}} <i class="octicon octicon-check"></i></span>
+				        <input type="hidden" name="webauthn_options" value="{{.WebauthnDisableOptions}}">
+					<button class="ui right mini red toggle button delete-button" data-url="{{$.Link}}/webauthn_two_factor_disable">{{.i18n.Tr "settings.two_factor_disable"}}</button>
+
+			              {{else}}
+					<span class="text red">{{.i18n.Tr "settings.two_factor_off"}} <i class="octicon octicon-x"></i></span>
+					<a class="ui right mini green toggle button" href="{{AppSubURL}}/user/settings/security/webauthn_two_factor_enable">{{.i18n.Tr "settings.two_factor_enable"}}</a>
+				      {{end}}
+				    </p>
+				  </div>
+                                </form>
 			</div>
 		</div>
 	</div>
