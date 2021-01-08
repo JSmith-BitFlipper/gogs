@@ -234,7 +234,7 @@ func runWeb(c *cli.Context) error {
 					m.Post("/begin", user.SettingsWebauthnRegistrationBegin)
 					m.Post("/finish", user.SettingsWebauthnRegistrationFinish)
 				})
-				m.Post("/webauthn_two_factor_disable", user.SettingsWebauthnDisable)
+				m.Post("/webauthn_two_factor_disable", bindIgnErr(form.WebauthnDisable{}), user.SettingsWebauthnDisable)
 			})
 			m.Group("/repositories", func() {
 				m.Get("", user.SettingsRepos)

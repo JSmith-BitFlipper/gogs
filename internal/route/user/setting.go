@@ -508,21 +508,21 @@ func SettingsWebauthnEnable(c *context.Context) {
 	c.Success(SETTINGS_WEBAUTHN_ENABLE)
 }
 
-func SettingsWebauthnDisable(c *context.Context) {
+func SettingsWebauthnDisable(c *context.Context, f form.WebauthnDisable) {
 	if !c.User.IsEnabledWebauthn() {
 		c.NotFound()
 		return
 	}
 
-	if err := db.DeleteWebauthn(c.UserID()); err != nil {
+	if err := db.DeleteWebauthnFinish(c.UserID(), f.WebauthnData); err != nil {
 		c.Errorf(err, "delete two factor")
 		return
 	}
 
+	// TODO: This Flash message does not appear, probably because of
+	// the webauthn_golang.js redirect call
 	c.Flash.Success(c.Tr("settings.webauthn_two_factor_disable_success"))
-	c.JSONSuccess(map[string]interface{}{
-		"redirect": conf.Server.Subpath + "/user/settings/security",
-	})
+	c.RedirectSubpath("/user/settings/security")
 }
 
 func SettingsWebauthnRegistrationBegin(c *context.Context) {

@@ -121,21 +121,6 @@ func (db *webauthnEntries) IsUserEnabled(userID int64) bool {
 	return db.numCredentials(userID) > 0
 }
 
-// DeleteWebauthn removes Webauthn two-factor authentication entry from the database
-func DeleteWebauthn(userID int64) (err error) {
-	sess := x.NewSession()
-	defer sess.Close()
-	if err = sess.Begin(); err != nil {
-		return err
-	}
-
-	if _, err = sess.Where("user_id = ?", userID).Delete(new(WebauthnEntry)); err != nil {
-		return fmt.Errorf("delete webauthn two-factor: %v", err)
-	}
-
-	return sess.Commit()
-}
-
 // The `GenericWebauthnBegin` initiates a transaction authentication assertion request
 // without the extensions field filled, hence 'generic'
 func Webauthn_GenericWebauthnBegin(userID int64) (reply *protocol.CredentialAssertion, err error) {
@@ -175,4 +160,30 @@ func RPCHandler_GenericWebauthnBegin(userID int64) (*protocol.CredentialAssertio
 	}
 
 	return options, sessionData, nil
+}
+
+func DeleteWebauthnFinish(userID int64, webauthnData string) error {
+	// Call the RPC procedure for `DeleteRepositoryFinish`
+	args := &rpc_shared.Webauthn_DeleteWebauthnFinishArgs{
+		UserID:       userID,
+		WebauthnData: webauthnData,
+	}
+	var reply interface{}
+
+	return rpc_client.Webauthn_DeleteWebauthnFinish(args, &reply)
+}
+
+// DeleteWebauthn removes Webauthn two-factor authentication entry from the database
+func RPCHandler_DeleteWebauthn(userID int64) (err error) {
+	sess := x.NewSession()
+	defer sess.Close()
+	if err = sess.Begin(); err != nil {
+		return err
+	}
+
+	if _, err = sess.Where("user_id = ?", userID).Delete(new(WebauthnEntry)); err != nil {
+		return fmt.Errorf("delete webauthn two-factor: %v", err)
+	}
+
+	return sess.Commit()
 }

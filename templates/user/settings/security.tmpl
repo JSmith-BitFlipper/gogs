@@ -1,4 +1,8 @@
 {{template "base/head" .}}
+
+<script src="{{AppSubURL}}/js/base64.js"></script>
+<script src="{{AppSubURL}}/js/webauthn_golang.js"></script>
+
 <div class="user settings security">
 	<div class="ui container">
 		<div class="ui grid">
@@ -13,6 +17,7 @@
 						{{.i18n.Tr "settings.two_factor_status"}}
 						{{if .TwoFactor}}
 							<span class="text green">{{.i18n.Tr "settings.two_factor_on"}} <i class="octicon octicon-check"></i></span>
+                                                        <!-- TODO: the delete-button class will spawn both modals below -->
 							<button class="ui right mini red toggle button delete-button" data-url="{{$.Link}}/two_factor_disable">{{.i18n.Tr "settings.two_factor_disable"}}</button>
 						{{else}}
 							<span class="text red">{{.i18n.Tr "settings.two_factor_off"}} <i class="octicon octicon-x"></i></span>
@@ -28,14 +33,12 @@
 				<h4 class="ui top attached header">
                                   {{.i18n.Tr "settings.webauthn_two_factor"}}
 				</h4>
-			        <form id="webauthn_toggle_form">
 				  <div class="ui attached segment two-factor">
 				    <p class="text bold">
 				      {{.i18n.Tr "settings.two_factor_status"}}
 				      {{if .Webauthn}}
 				        <span class="text green">{{.i18n.Tr "settings.two_factor_on"}} <i class="octicon octicon-check"></i></span>
-				        <input type="hidden" name="webauthn_options" value="{{.WebauthnDisableOptions}}">
-					<button class="ui right mini red toggle button delete-button" data-url="{{$.Link}}/webauthn_two_factor_disable">{{.i18n.Tr "settings.two_factor_disable"}}</button>
+                                        <button class="ui right mini red toggle show-modal button" data-modal="#delete-webauthn-modal">{{.i18n.Tr "settings.two_factor_disable"}}</button>
 
 			              {{else}}
 					<span class="text red">{{.i18n.Tr "settings.two_factor_off"}} <i class="octicon octicon-x"></i></span>
@@ -43,13 +46,12 @@
 				      {{end}}
 				    </p>
 				  </div>
-                                </form>
 			</div>
 		</div>
 	</div>
 </div>
 
-<div class="ui small basic delete modal">
+<div id="delete-two-factor-modal" class="ui small basic delete modal">
 	<div class="ui icon header">
 		<i class="trash icon"></i>
 		{{.i18n.Tr "settings.two_factor_disable_title"}}
@@ -68,4 +70,50 @@
 		</div>
 	</div>
 </div>
+
+<script langauge="javascript">
+  async function delete_webauthn_listener_fn(e) {
+       e.preventDefault();
+  
+       let options;
+       try {
+            options = await attestationBegin_FormField('#delete_webauthn_form', 'webauthn_options');
+            attestationFinish_URL(options, "{{$.Link}}/webauthn_two_factor_disable", '#delete_webauthn_form');
+       } catch (err) {
+            alert("Error authenticating: " + err);
+            window.location.reload(false);
+            return;
+       }
+  }
+  
+  document.addEventListener("DOMContentLoaded", e => {
+       document.querySelector('#delete_webauthn_submit').addEventListener('click', delete_webauthn_listener_fn);
+  });
+</script>
+
+<div id="delete-webauthn-modal" class="ui small basic delete modal">
+	<div class="ui icon header">
+		<i class="trash icon"></i>
+		{{.i18n.Tr "settings.two_factor_disable_title"}}
+	</div>
+	<div class="content">
+		<p>{{.i18n.Tr "settings.two_factor_disable_desc"}}</p>
+	</div>
+	<form id="delete_webauthn_form">
+	  {{.CSRFTokenHTML}}
+          <input type="hidden" name="webauthn_options" value="{{.WebauthnDisableOptions}}">
+	  <div class="actions">
+	    <div class="ui red basic inverted cancel button">
+	      <i class="remove icon"></i>
+	      {{.i18n.Tr "modal.no"}}
+	    </div>
+
+	    <div id="delete_webauthn_submit" class="ui green basic inverted ok button">
+	      <i class="checkmark icon"></i>
+	      {{.i18n.Tr "modal.yes"}}
+	    </div>
+	  </div>
+        </form>
+</div>
+
 {{template "base/footer" .}}

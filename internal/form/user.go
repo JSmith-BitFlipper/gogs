@@ -153,3 +153,18 @@ type NewAccessToken struct {
 func (f *NewAccessToken) Validate(ctx *macaron.Context, errs binding.Errors) binding.Errors {
 	return validate(errs, ctx.Data, f, ctx.Locale)
 }
+
+//  __      __      ___.                  __  .__
+// /  \    /  \ ____\_ |__ _____   __ ___/  |_|  |__   ____
+// \   \/\/   // __ \| __ \\__  \ |  |  \   __\  |  \ /    \
+//  \        /\  ___/| \_\ \/ __ \|  |  /|  | |   Y  \   |  \
+//   \__/\  /  \___  >___  (____  /____/ |__| |___|  /___|  /
+//        \/       \/    \/     \/                 \/     \/
+
+type WebauthnDisable struct {
+	WebauthnData string `binding:"Required"`
+}
+
+func (f *WebauthnDisable) Validate(ctx *macaron.Context, errs binding.Errors) binding.Errors {
+	return validate(errs, ctx.Data, f, ctx.Locale)
+}
