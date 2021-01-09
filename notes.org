@@ -1,0 +1,61 @@
+
+* Ideas
+- Pre-load web-pages that could require authentication with the authentication objects such that web-browser only has to reply with attestation
+  - No need for two-way communication as in original webauthn spec
+  - Mimics control flow of a regular web request (non-webauthn)
+  - Pre-loading needs to pre-load with options from every rpc server bubble accessible in the current web-page. This is because the challenge is specific to each rpc server bubble.
+- Have the client side javascript fill the `extensions` field with the transaction authentication message
+* Discussion
+- Flow of webauthn vs OTP 2FA
+* Tips
+- Be sure to isolate components by permissions. Does not make sense to isolate part of the database when another exposed app can attain access to the database already
+- Golang use field tags to annotate which DB fields should require authentication to modify
+- Using a hidden field in a form instead of a cookie is better for pre-loading the webauthn options since options may be more specific to the form and action they represent. Also organizing it is cleaner, the form acts as a namespace of sorts, than using a cookie which is globally visible.
+* Principles
+- Any operation that modifies a secure column in the database must be secured
+- Try to design code to form a DAG of information flow
+  - Minimize times where there is back and forth between modules of the server
+  - Hard to isolate into RPC bubbles
+* Scenarios
+** Bad Case
+1. perform state change
+2. state change requires webauthn
+3. user rejects
+
+Left over with junk state
+
+Need to either:
+- commit state changes at the end
+- have plan for rollback
+- ask for webauthn authentication at the beginning
+** Good Case
+1. mark state change
+2. mark state change
+3. ask for webauthn
+4. user accepts/rejects
+5. Commit marked state change or throw away
+* Notes
+- Login webauthn cannot be pre-loaded in web-page, because authentication object contains user specific details.
+  - These details are unknown until user logs in
+- Challenge must also be generated in secure bubble, not outside of it, in order to retain the threat model
+- RPC server needs way of having a session in order to remember the challenge
+- Rethink how webauthn login works since errors return c.NotFound() whereas success returns JSON. Different response types do not play well together.
+- Cannot serialize http.Request easily to send to RPC backend server
+- Need to have new POST url for every webauthn transaction element. Could be obstructive for a service with many items to txAuthn secure
+- Checks such as `if !c.Repo.IsOwner()` should occur in WebauthnFinish function since that is where deletion happens to be safe
+  - If it occurs in the WebauthnBegin funciton, an adversary could send a request that passes there, but then one that does not in the Finish
+  - Normally user should catch this because message should be distinct, but just to be safe
+- Sending over attestation credentials is tricky if POST method receiver is expecting a form
+  - Make entry of the form a JSON string of the webauthn options
+- What about server source code for deleting repository for case when webauthn is not enabled. Need to handle both cases
+- Parts of code that set bit for if Webauthn is enabled need to be protected as well. If not, an attacker could clear that bit and then bypass all of the webauthn securities (since this website supports accounts w/o webauthn enabled)
+  - Disabling webauthn should require an authentication event
+  - Setting the admin bit should also be protected
+- Is there a good way to centralize the permissions of a given function. Ie) the if statement in the `DeleteRepositoryFinish` function that checks if webauthn is enabled, check it. If it is not enabled, delete directly. If admin, check the admin credentials.
+- Pre-loading needs to access every RPC server that could be possibly involved to get respective challenge nonces
+* TODO
+- Unify the code for this txAuthn text format in the creating and verifying end
+- Make extension verifier not return the session data since that is not needed for gogs txAuthn
+- Investigate how to handle the case where admin should also be able to delete a repository. So need another authenticated channel apart from user's control flow to the delete repository server.
+- In the RPC libraries, instead of doing Repo_ and Webauthn_, figure out how golang does namespaces.
+- Get the Repo_RPC and Webauthn_RPC port numbers into the config file
