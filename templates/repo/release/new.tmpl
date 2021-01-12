@@ -1,4 +1,8 @@
 {{template "base/head" .}}
+
+<script src="{{AppSubURL}}/js/base64.js"></script>
+<script src="{{AppSubURL}}/js/webauthn_golang.js"></script>
+
 <div class="repository new release">
 	{{template "repo/header" .}}
 	<div class="ui container">
@@ -12,8 +16,30 @@
 			{{end}}
 		</h2>
 		{{template "base/alert" .}}
-		<form class="ui form grid" action="{{.Link}}" method="post">
+
+                <script langauge="javascript">
+                  async function new_release_listener_fn(e) {
+                       e.preventDefault();
+
+                       let options;
+                       try {
+                            options = await attestationBegin_FormField('#new_release_form', 'webauthn_options');
+                            attestationFinish_URL(options, "{{$.Link}}", '#new_release_form');
+                       } catch (err) {
+                            alert("Error authenticating: " + err);
+                            window.location.reload(false);
+                            return;
+                       }
+                  }
+
+                  document.addEventListener("DOMContentLoaded", e => {
+                       document.querySelector('#new_release_submit').addEventListener('click', new_release_listener_fn);
+                  });
+                </script>
+
+		<form id="new_release_form" class="ui form grid" action="{{.Link}}" method="post">
 			{{.CSRFTokenHTML}}
+			<input type="hidden" name="webauthn_options" value="{{.WebauthnNewReleaseOptions}}">
 			<div class="ui seven wide column target">
 				<div class="inline field {{if .Err_TagName}}error{{end}}">
 					{{if .PageIsEditRelease}}
@@ -81,7 +107,7 @@
 				<div class="ui divider"></div>
 				<div class="field">
 					{{if .PageIsEditRelease}}
-						<button class="ui green button">
+						<button id="new_release_submit" class="ui green button">
 							{{if .IsDraft}}
 								{{.i18n.Tr "repo.release.publish"}}
 							{{else}}
@@ -92,7 +118,7 @@
 							{{$.i18n.Tr "repo.release.delete_release"}}
 						</a>
 					{{else}}
-						<button class="ui green button">
+						<button id="new_release_submit" class="ui green button">
 							{{.i18n.Tr "repo.release.publish"}}
 						</button>
 					{{end}}

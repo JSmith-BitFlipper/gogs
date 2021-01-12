@@ -63,6 +63,7 @@ Need to either:
 - Transfer ownership could be done, no need for secure input
 - Releases are super complicated to txAuthn it looks like
 - Sneaky attacks: User is trying to delete repo B. Repository A is very important. Directly before the user authenticates the delete event of B, the attacker renames repo A to B, and actually issues the deletion of repo B (was A). The user thinks he's doing one thing, but in reality he's doing another, deleting the important repository!
+  - Sneaky rename attack is also possible for releases, where they could be renamed right before being deleted
 * TODO
 - Move the registration part of webauthn also into the Webauthn RPC server so that only the RPC server deals w/ the webauthn db table
 - Unify the code for this txAuthn text format in the creating and verifying end

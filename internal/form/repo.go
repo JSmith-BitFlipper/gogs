@@ -303,6 +303,8 @@ type NewRelease struct {
 	Draft      string
 	Prerelease bool
 	Files      []string
+
+	WebauthnData string
 }
 
 func (f *NewRelease) Validate(ctx *macaron.Context, errs binding.Errors) binding.Errors {
