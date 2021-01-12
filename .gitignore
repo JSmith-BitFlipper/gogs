@@ -17,3 +17,4 @@ output*
 *.sublime-workspace
 /release
 .task
+my_*

@@ -53,7 +53,18 @@ Need to either:
   - Setting the admin bit should also be protected
 - Is there a good way to centralize the permissions of a given function. Ie) the if statement in the `DeleteRepositoryFinish` function that checks if webauthn is enabled, check it. If it is not enabled, delete directly. If admin, check the admin credentials.
 - Pre-loading needs to access every RPC server that could be possibly involved to get respective challenge nonces
+** Webauthn Use Cases
+- Input SSH key difficult to txAuthn because text is long for user to read
+- Password change is not possible because need secure input
+  - Is it a good idea to ask for a confirmation, showing the old and new passwords on device?
+- How to authenticate image such as for Avatar setting (txAuthnGeneral)
+- Webauthn via a proxy is an open question. There are Personal Access Tokens. Could webauthn be invoked for a remotely called delete repository event, for example?
+- When adding Authentication Source through the Admin panel, what is a good way of authenticating the entire form being sent
+- Transfer ownership could be done, no need for secure input
+- Releases are super complicated to txAuthn it looks like
+- Sneaky attacks: User is trying to delete repo B. Repository A is very important. Directly before the user authenticates the delete event of B, the attacker renames repo A to B, and actually issues the deletion of repo B (was A). The user thinks he's doing one thing, but in reality he's doing another, deleting the important repository!
 * TODO
+- Move the registration part of webauthn also into the Webauthn RPC server so that only the RPC server deals w/ the webauthn db table
 - Unify the code for this txAuthn text format in the creating and verifying end
 - Make extension verifier not return the session data since that is not needed for gogs txAuthn
 - Investigate how to handle the case where admin should also be able to delete a repository. So need another authenticated channel apart from user's control flow to the delete repository server.

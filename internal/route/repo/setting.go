@@ -43,7 +43,7 @@ func Settings(c *context.Context) {
 	c.PageIs("SettingsOptions")
 	c.RequireAutosize()
 
-	// If Webauthn is not enabled, simply return
+	// If Webauthn is not enabled, simply return now
 	if !db.WebauthnEntries.IsUserEnabled(c.User.ID) {
 		c.Success(SETTINGS_OPTIONS)
 		return
@@ -66,7 +66,7 @@ func Settings(c *context.Context) {
 			c.Repo.Repository.FullName()),
 	}
 
-	// Encode the `options` into JSON
+	// Encode the `options` into JSON format
 	json_delete_repo_options, err := json.Marshal(delete_repo_options.Response)
 	if err != nil {
 		c.Error(err, "JSON options")

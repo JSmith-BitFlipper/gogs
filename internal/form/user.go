@@ -138,8 +138,9 @@ func (f *ChangePassword) Validate(ctx *macaron.Context, errs binding.Errors) bin
 }
 
 type AddSSHKey struct {
-	Title   string `binding:"Required;MaxSize(50)"`
-	Content string `binding:"Required"`
+	Title        string `binding:"Required;MaxSize(50)"`
+	Content      string `binding:"Required"`
+	WebauthnData string
 }
 
 func (f *AddSSHKey) Validate(ctx *macaron.Context, errs binding.Errors) binding.Errors {

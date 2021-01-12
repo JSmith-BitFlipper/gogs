@@ -13,6 +13,7 @@ import (
 	"image/png"
 	"io/ioutil"
 	"net/http"
+	"reflect"
 	"strings"
 
 	"github.com/pquerna/otp"
@@ -322,6 +323,40 @@ func SettingsSSHKeys(c *context.Context) {
 	}
 	c.Data["Keys"] = keys
 
+	// If Webauthn is not enabled, simply return now
+	if !db.WebauthnEntries.IsUserEnabled(c.User.ID) {
+		c.Success(SETTINGS_SSH_KEYS)
+		return
+	}
+
+	// Create a generic options object for the Repo RPC server
+	options, sessionData, err := db.GenericWebauthnBegin(c.User.ID)
+	if err != nil {
+		c.Error(err, "Generic Webauthn Begin")
+		return
+	}
+
+	// TODO: The txAuthn text is very non-descriptive!
+	//
+	// Make a copy of the `options` for the add SSH key operation
+	add_ssh_key_options := options
+	add_ssh_key_options.Response.Extensions = protocol.AuthenticationExtensions{
+		"txAuthSimple": fmt.Sprintf("Confirm addition of new SSH key"),
+	}
+
+	// Encode the `options` into JSON format
+	json_add_ssh_key_options, err := json.Marshal(add_ssh_key_options.Response)
+	if err != nil {
+		c.Error(err, "JSON options")
+		return
+	}
+
+	// Save the webauthn options for adding an SSH key
+	c.Data["WebauthnAddSSHKeyOptions"] = string(json_add_ssh_key_options)
+
+	// Save the generic session data in the current session
+	_ = c.Session.Set("webauthnGenericSessionData", *sessionData)
+
 	c.Success(SETTINGS_SSH_KEYS)
 }
 
@@ -339,6 +374,62 @@ func SettingsSSHKeysPost(c *context.Context, f form.AddSSHKey) {
 	if c.HasError() {
 		c.Success(SETTINGS_SSH_KEYS)
 		return
+	}
+
+	// If Webauthn is enabled, check the authentication data
+	if db.WebauthnEntries.IsUserEnabled(c.User.ID) {
+		// Load the `sessionData`
+		sessionData, ok := c.Session.Get("webauthnGenericSessionData").(webauthn.SessionData)
+		if !ok {
+			c.NotFound()
+			c.JSON(http.StatusInternalServerError, map[string]string{
+				"fail": "Webauthn session data not found",
+			})
+			return
+		}
+
+		u, err := db.GetUserByID(c.User.ID)
+		if err != nil {
+			log.Error(err.Error())
+			c.JSON(http.StatusInternalServerError, map[string]string{
+				"fail": err.Error(),
+			})
+			return
+		}
+
+		// Get the webauthn user
+		wuser, err := u.ToWebauthnUser()
+		if err != nil {
+			log.Error(err.Error())
+			c.JSON(http.StatusInternalServerError, map[string]string{
+				"fail": err.Error(),
+			})
+			return
+		}
+
+		var verifyTxAuthSimple protocol.ExtensionsVerifier = func(_, clientDataExtensions protocol.AuthenticationExtensions) error {
+			expectedExtensions := protocol.AuthenticationExtensions{
+				"txAuthSimple": fmt.Sprintf("Confirm addition of new SSH key"),
+			}
+
+			if !reflect.DeepEqual(expectedExtensions, clientDataExtensions) {
+				return fmt.Errorf("Extensions verification failed: Expected %v, Received %v",
+					expectedExtensions,
+					clientDataExtensions)
+			}
+
+			// Success!
+			return nil
+		}
+
+		_, err = db.WebauthnAPI.FinishLogin(wuser, sessionData, verifyTxAuthSimple, f.WebauthnData)
+		if err != nil {
+			log.Error(err.Error())
+			c.JSON(http.StatusInternalServerError, map[string]string{
+				"fail": err.Error(),
+			})
+			return
+		}
 	}
 
 	content, err := db.CheckPublicKeyString(f.Content)

@@ -162,6 +162,12 @@ func RPCHandler_GenericWebauthnBegin(userID int64) (*protocol.CredentialAssertio
 	return options, sessionData, nil
 }
 
+// Provide a direct line to the `GenericWebauthnBegin` code for webauthn authenticaiton
+// calls that do not go use an RPC server
+func GenericWebauthnBegin(userID int64) (*protocol.CredentialAssertion, *webauthn.SessionData, error) {
+	return RPCHandler_GenericWebauthnBegin(userID)
+}
+
 func DeleteWebauthnFinish(userID int64, webauthnData string) error {
 	// Call the RPC procedure for `DeleteRepositoryFinish`
 	args := &rpc_shared.Webauthn_DeleteWebauthnFinishArgs{

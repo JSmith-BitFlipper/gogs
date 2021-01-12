@@ -240,7 +240,6 @@ const attestationFinish_URL = async (credentialRequestOptionsFromServer, finish_
     }
 
     let response;
-
     // Webauthn is enabled
     if (credentialRequestOptionsFromServer) {
         // Convert certain members of the PublicKeyCredentialRequestOptions into
