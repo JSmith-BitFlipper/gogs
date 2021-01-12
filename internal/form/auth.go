@@ -42,6 +42,8 @@ type Authentication struct {
 	SkipVerify        bool
 	PAMServiceName    string
 	GitHubAPIEndpoint string `form:"github_api_endpoint" binding:"Url"`
+
+	WebauthnData string
 }
 
 func (f *Authentication) Validate(ctx *macaron.Context, errs binding.Errors) binding.Errors {

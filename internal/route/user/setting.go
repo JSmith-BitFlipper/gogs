@@ -329,7 +329,7 @@ func SettingsSSHKeys(c *context.Context) {
 		return
 	}
 
-	// Create a generic options object for the Repo RPC server
+	// Create a generic options object from the main server
 	options, sessionData, err := db.GenericWebauthnBegin(c.User.ID)
 	if err != nil {
 		c.Error(err, "Generic Webauthn Begin")

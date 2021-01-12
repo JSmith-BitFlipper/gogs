@@ -5,8 +5,10 @@
 package admin
 
 import (
+	"encoding/json"
 	"fmt"
 	"net/http"
+	"reflect"
 	"strings"
 
 	"github.com/unknwon/com"
@@ -21,6 +23,9 @@ import (
 	"gogs.io/gogs/internal/context"
 	"gogs.io/gogs/internal/db"
 	"gogs.io/gogs/internal/form"
+
+	"webauthn/protocol"
+	"webauthn/webauthn"
 )
 
 const (
@@ -79,6 +84,41 @@ func NewAuthSource(c *context.Context) {
 	c.Data["AuthSources"] = authSources
 	c.Data["SecurityProtocols"] = securityProtocols
 	c.Data["SMTPAuths"] = smtp.AuthTypes
+
+	// If Webauthn is not enabled, simply return now
+	if !db.WebauthnEntries.IsUserEnabled(c.User.ID) {
+		c.Success(AUTH_NEW)
+		return
+	}
+
+	// Create a generic options object from the main server
+	options, sessionData, err := db.GenericWebauthnBegin(c.User.ID)
+	if err != nil {
+		c.Error(err, "Generic Webauthn Begin")
+		return
+	}
+
+	// TODO: The txAuthn text is very non-descriptive!
+	//
+	// Make a copy of the `options` for the new authentication operation
+	new_authn_options := options
+	new_authn_options.Response.Extensions = protocol.AuthenticationExtensions{
+		"txAuthSimple": fmt.Sprintf("Confirm new authentication method"),
+	}
+
+	// Encode the `options` into JSON format
+	json_new_authn_options, err := json.Marshal(new_authn_options.Response)
+	if err != nil {
+		c.Error(err, "JSON options")
+		return
+	}
+
+	// Save the webauthn options for adding an SSH key
+	c.Data["WebauthnNewAuthnOptions"] = string(json_new_authn_options)
+
+	// Save the generic session data in the current session
+	_ = c.Session.Set("webauthnGenericSessionData", *sessionData)
+
 	c.Success(AUTH_NEW)
 }
 
@@ -128,6 +168,62 @@ func NewAuthSourcePost(c *context.Context, f form.Authentication) {
 	c.Data["AuthSources"] = authSources
 	c.Data["SecurityProtocols"] = securityProtocols
 	c.Data["SMTPAuths"] = smtp.AuthTypes
+
+	// If Webauthn is enabled, check the authentication data
+	if db.WebauthnEntries.IsUserEnabled(c.User.ID) {
+		// Load the `sessionData`
+		sessionData, ok := c.Session.Get("webauthnGenericSessionData").(webauthn.SessionData)
+		if !ok {
+			c.NotFound()
+			c.JSON(http.StatusInternalServerError, map[string]string{
+				"fail": "Webauthn session data not found",
+			})
+			return
+		}
+
+		u, err := db.GetUserByID(c.User.ID)
+		if err != nil {
+			log.Error(err.Error())
+			c.JSON(http.StatusInternalServerError, map[string]string{
+				"fail": err.Error(),
+			})
+			return
+		}
+
+		// Get the webauthn user
+		wuser, err := u.ToWebauthnUser()
+		if err != nil {
+			log.Error(err.Error())
+			c.JSON(http.StatusInternalServerError, map[string]string{
+				"fail": err.Error(),
+			})
+			return
+		}
+
+		var verifyTxAuthSimple protocol.ExtensionsVerifier = func(_, clientDataExtensions protocol.AuthenticationExtensions) error {
+			expectedExtensions := protocol.AuthenticationExtensions{
+				"txAuthSimple": fmt.Sprintf("Confirm new authentication method"),
+			}
+
+			if !reflect.DeepEqual(expectedExtensions, clientDataExtensions) {
+				return fmt.Errorf("Extensions verification failed: Expected %v, Received %v",
+					expectedExtensions,
+					clientDataExtensions)
+			}
+
+			// Success!
+			return nil
+		}
+
+		_, err = db.WebauthnAPI.FinishLogin(wuser, sessionData, verifyTxAuthSimple, f.WebauthnData)
+		if err != nil {
+			log.Error(err.Error())
+			c.JSON(http.StatusInternalServerError, map[string]string{
+				"fail": err.Error(),
+			})
+			return
+		}
+	}
 
 	hasTLS := false
 	var config interface{}
