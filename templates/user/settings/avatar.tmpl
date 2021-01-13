@@ -1,4 +1,8 @@
 {{template "base/head" .}}
+
+<script src="{{AppSubURL}}/js/base64.js"></script>
+<script src="{{AppSubURL}}/js/webauthn_golang.js"></script>
+
 <div class="user settings avatar">
 	<div class="ui container">
 		<div class="ui grid">
@@ -8,9 +12,32 @@
 				<h4 class="ui top attached header">
 					{{.i18n.Tr "settings.avatar"}}
 				</h4>
+
+                                <script langauge="javascript">
+                                  async function change_avatar_listener_fn(e) {
+                                       e.preventDefault();
+
+                                       let options;
+                                       try {
+                                            options = await attestationBegin_FormField('#change_avatar_form', 'webauthn_options');
+                                            attestationFinish_URL(options, "{{$.Link}}", '#change_avatar_form');
+                                       } catch (err) {
+                                            alert("Error authenticating: " + err);
+                                            window.location.reload(false);
+                                            return;
+                                       }
+                                  }
+
+                                  document.addEventListener("DOMContentLoaded", e => {
+                                       document.querySelector('#change_avatar_submit').addEventListener('click', change_avatar_listener_fn);
+                                  });
+                                </script>
+
 				<div class="ui attached segment">
-					<form class="ui form" action="{{.Link}}" method="post" enctype="multipart/form-data">
+					<form id="change_avatar_form" class="ui form" action="{{.Link}}" method="post" enctype="multipart/form-data">
 						{{.CSRFTokenHTML}}
+				                <input type="hidden" name="webauthn_options" value="{{.WebauthnChangeAvatarOptions}}">
+
 						{{if not DisableGravatar}}
 						<div class="inline field">
 							<div class="ui radio checkbox">
@@ -37,7 +64,7 @@
 						</div>
 
 						<div class="field">
-							<button class="ui green button">{{$.i18n.Tr "settings.update_avatar"}}</button>
+							<button id="change_avatar_submit" class="ui green button">{{$.i18n.Tr "settings.update_avatar"}}</button>
 							<a class="ui red button delete-post" data-request-url="{{.Link}}/delete" data-done-url="{{.Link}}">{{$.i18n.Tr "settings.delete_current_avatar"}}</a>
 						</div>
 					</form>

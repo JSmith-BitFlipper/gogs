@@ -168,10 +168,101 @@ func UpdateAvatarSetting(c *context.Context, f form.Avatar, ctxUser *db.User) er
 func SettingsAvatar(c *context.Context) {
 	c.Title("settings.avatar")
 	c.PageIs("SettingsAvatar")
+
+	// If Webauthn is not enabled, simply return now
+	if !db.WebauthnEntries.IsUserEnabled(c.User.ID) {
+		c.Success(SETTINGS_AVATAR)
+		return
+	}
+
+	// Create a generic options object from the main server
+	options, sessionData, err := db.GenericWebauthnBegin(c.User.ID)
+	if err != nil {
+		c.Error(err, "Generic Webauthn Begin")
+		return
+	}
+
+	// TODO: The txAuthn text is very non-descriptive!
+	//
+	// Make a copy of the `options` for the add SSH key operation
+	change_avatar_options := options
+	change_avatar_options.Response.Extensions = protocol.AuthenticationExtensions{
+		"txAuthSimple": fmt.Sprintf("Confirm new avatar"),
+	}
+
+	// Encode the `options` into JSON format
+	json_change_avatar_options, err := json.Marshal(change_avatar_options.Response)
+	if err != nil {
+		c.Error(err, "JSON options")
+		return
+	}
+
+	// Save the webauthn options for adding an SSH key
+	c.Data["WebauthnChangeAvatarOptions"] = string(json_change_avatar_options)
+
+	// Save the generic session data in the current session
+	_ = c.Session.Set("webauthnGenericSessionData", *sessionData)
+
 	c.Success(SETTINGS_AVATAR)
 }
 
 func SettingsAvatarPost(c *context.Context, f form.Avatar) {
+	// If Webauthn is enabled, check the authentication data
+	if db.WebauthnEntries.IsUserEnabled(c.User.ID) {
+		// Load the `sessionData`
+		sessionData, ok := c.Session.Get("webauthnGenericSessionData").(webauthn.SessionData)
+		if !ok {
+			c.NotFound()
+			c.JSON(http.StatusInternalServerError, map[string]string{
+				"fail": "Webauthn session data not found",
+			})
+			return
+		}
+
+		u, err := db.GetUserByID(c.User.ID)
+		if err != nil {
+			log.Error(err.Error())
+			c.JSON(http.StatusInternalServerError, map[string]string{
+				"fail": err.Error(),
+			})
+			return
+		}
+
+		// Get the webauthn user
+		wuser, err := u.ToWebauthnUser()
+		if err != nil {
+			log.Error(err.Error())
+			c.JSON(http.StatusInternalServerError, map[string]string{
+				"fail": err.Error(),
+			})
+			return
+		}
+
+		var verifyTxAuthSimple protocol.ExtensionsVerifier = func(_, clientDataExtensions protocol.AuthenticationExtensions) error {
+			expectedExtensions := protocol.AuthenticationExtensions{
+				"txAuthSimple": fmt.Sprintf("Confirm new avatar"),
+			}
+
+			if !reflect.DeepEqual(expectedExtensions, clientDataExtensions) {
+				return fmt.Errorf("Extensions verification failed: Expected %v, Received %v",
+					expectedExtensions,
+					clientDataExtensions)
+			}
+
+			// Success!
+			return nil
+		}
+
+		_, err = db.WebauthnAPI.FinishLogin(wuser, sessionData, verifyTxAuthSimple, f.WebauthnData)
+		if err != nil {
+			log.Error(err.Error())
+			c.JSON(http.StatusInternalServerError, map[string]string{
+				"fail": err.Error(),
+			})
+			return
+		}
+	}
+
 	if err := UpdateAvatarSetting(c, f, c.User); err != nil {
 		c.Flash.Error(err.Error())
 	} else {

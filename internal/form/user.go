@@ -113,6 +113,8 @@ type Avatar struct {
 	Avatar      *multipart.FileHeader
 	Gravatar    string `binding:"OmitEmpty;Email;MaxSize(254)"`
 	Federavatar bool
+
+	WebauthnData string
 }
 
 func (f *Avatar) Validate(ctx *macaron.Context, errs binding.Errors) binding.Errors {
