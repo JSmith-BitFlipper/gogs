@@ -112,3 +112,8 @@ func (t *Repo) DeleteRepository(args *shared.Repo_DeleteRepositoryArgs, reply *i
 
 	return db.RPCHandler_DeleteRepository(ownerID, repoID)
 }
+
+// DeleteMissingRepositories deletes all repository records that lost Git files.
+func (t *Repo) DeleteMissingRepositories(args *interface{}, reply *interface{}) error {
+	return db.RPCHandler_DeleteMissingRepositories()
+}

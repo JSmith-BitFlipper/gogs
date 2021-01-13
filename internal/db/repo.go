@@ -1938,8 +1938,13 @@ func gatherMissingRepoRecords() ([]*Repository, error) {
 	return repos, nil
 }
 
-// DeleteMissingRepositories deletes all repository records that lost Git files.
 func DeleteMissingRepositories() error {
+	var args, reply interface{}
+	return rpc_client.Repo_DeleteMissingRepositories(&args, &reply)
+}
+
+// DeleteMissingRepositories deletes all repository records that lost Git files.
+func RPCHandler_DeleteMissingRepositories() error {
 	repos, err := gatherMissingRepoRecords()
 	if err != nil {
 		return fmt.Errorf("gatherMissingRepoRecords: %v", err)
