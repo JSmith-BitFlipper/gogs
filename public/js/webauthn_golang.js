@@ -1,3 +1,12 @@
+// Add `.format()` function to the String type
+String.prototype.format = function() {
+    a = this;
+    for (k in arguments) {
+        a = a.replace("{" + k + "}", arguments[k]);
+    }
+    return a;
+}
+
 function b64enc(buf) {
     return base64js.fromByteArray(buf)
                    .replace(/\+/g, "-")

@@ -432,7 +432,7 @@ func SettingsSSHKeys(c *context.Context) {
 	// Make a copy of the `options` for the add SSH key operation
 	add_ssh_key_options := options
 	add_ssh_key_options.Response.Extensions = protocol.AuthenticationExtensions{
-		"txAuthSimple": fmt.Sprintf("Confirm addition of new SSH key"),
+		"txAuthSimple": fmt.Sprintf("Confirm addition of new SSH key: {0}"),
 	}
 
 	// Encode the `options` into JSON format
@@ -500,7 +500,7 @@ func SettingsSSHKeysPost(c *context.Context, f form.AddSSHKey) {
 
 		var verifyTxAuthSimple protocol.ExtensionsVerifier = func(_, clientDataExtensions protocol.AuthenticationExtensions) error {
 			expectedExtensions := protocol.AuthenticationExtensions{
-				"txAuthSimple": fmt.Sprintf("Confirm addition of new SSH key"),
+				"txAuthSimple": fmt.Sprintf("Confirm addition of new SSH key: %s", f.Content),
 			}
 
 			if !reflect.DeepEqual(expectedExtensions, clientDataExtensions) {

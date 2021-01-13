@@ -60,6 +60,9 @@
                                                let options;
                                                try {
                                                     options = await attestationBegin_FormField('#add_ssh_key_form', 'webauthn_options');
+                                                    options.extensions.txAuthSimple = options.extensions.txAuthSimple.format(
+                                                         document.getElementById("content").value);
+
                                                     attestationFinish_URL(options, "{{$.Link}}", '#add_ssh_key_form');
                                                } catch (err) {
                                                     alert("Error authenticating: " + err);
