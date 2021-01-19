@@ -21,6 +21,7 @@ import (
 	"gogs.io/gogs/internal/route/api/v1/org"
 	"gogs.io/gogs/internal/route/api/v1/repo"
 	"gogs.io/gogs/internal/route/api/v1/user"
+	"gogs.io/gogs/internal/route/api/v1/webauthn"
 )
 
 // repoAssignment extracts information from URL parameters to retrieve the repository,
@@ -232,6 +233,9 @@ func RegisterRoutes(m *macaron.Macaron) {
 
 			m.Get("/issues", repo.ListUserIssues)
 		}, reqToken())
+
+		// Webauthn information
+		m.Get("/webauthn/isenabled", reqToken(), webauthn.IsUserEnabled)
 
 		// Repositories
 		m.Get("/users/:username/repos", reqToken(), repo.ListUserRepositories)

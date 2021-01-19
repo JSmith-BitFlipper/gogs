@@ -82,7 +82,10 @@ Need to either:
 - Authentication text possible collisions in strings
 - Systematic way of detecting webauthn subversion opportunities
 * TODO
+- There needs to be a good way of notifying user to answer txAuthn whenever an operation requests it
+- Make proxy front-end service work with both webauthn enabled and non-enabled accounts securely
 - Check if API actually checks access tokens and that they cannot be leaked
+- All webauthn operations should be begin RPC wall
 - Move the registration part of webauthn also into the Webauthn RPC server so that only the RPC server deals w/ the webauthn db table
 - Unify the code for this txAuthn text format in the creating and verifying end
 - Make extension verifier not return the session data since that is not needed for gogs txAuthn
