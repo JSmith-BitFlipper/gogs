@@ -96,3 +96,4 @@ require (
 
 // For local `webauthn` import
 replace webauthn => ./webauthn
+replace github.com/gogs/go-gogs-client => ./go-gogs-client

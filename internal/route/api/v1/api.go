@@ -249,8 +249,9 @@ func RegisterRoutes(m *macaron.Macaron) {
 		})
 
 		m.Group("/repos", func() {
+			m.Post("/generic_webauthn_begin", repo.GenericWebauthnBegin)
 			m.Post("/migrate", bind(form.MigrateRepo{}), repo.Migrate)
-			m.Delete("/:username/:reponame", repoAssignment(), repo.Delete)
+			m.Delete("/:username/:reponame", repoAssignment(), bind(api.WebauthnContainer{}), repo.Delete)
 
 			m.Group("/:username/:reponame", func() {
 				m.Group("/hooks", func() {

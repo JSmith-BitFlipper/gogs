@@ -1,4 +1,3 @@
-
 * Ideas
 - Pre-load web-pages that could require authentication with the authentication objects such that web-browser only has to reply with attestation
   - No need for two-way communication as in original webauthn spec
@@ -53,6 +52,9 @@ Need to either:
   - Setting the admin bit should also be protected
 - Is there a good way to centralize the permissions of a given function. Ie) the if statement in the `DeleteRepositoryFinish` function that checks if webauthn is enabled, check it. If it is not enabled, delete directly. If admin, check the admin credentials.
 - Pre-loading needs to access every RPC server that could be possibly involved to get respective challenge nonces
+- Must have API route for generic webauthn begin for every RPC bubble
+  - No way to pre-load API calls since there is no "GET" request
+- Unsure what origin checking does since the origin is set by the web-browser which could be compromised
 ** Webauthn Use Cases
 - Input SSH key difficult to txAuthn because text is long for user to read
 - Password change is not possible because need secure input
@@ -64,7 +66,23 @@ Need to either:
 - Releases are super complicated to txAuthn it looks like
 - Sneaky attacks: User is trying to delete repo B. Repository A is very important. Directly before the user authenticates the delete event of B, the attacker renames repo A to B, and actually issues the deletion of repo B (was A). The user thinks he's doing one thing, but in reality he's doing another, deleting the important repository!
   - Sneaky rename attack is also possible for releases, where they could be renamed right before being deleted
+
+** Subverting DeleteRepository Defenses
+- Rename the repository right before the user is going to delete it
+- Add user as a teammate owner of a repository within an organization. This user does not have webauthn/is entirely compromised and may delete repository on their own
+- `DeleteRepositoryFinish` code in RPC Server does not check relationship between `userID` and `ownerID, repoID`. Namely an adversary with a compromised server front-end could send a `userID` without Webauthn, but the `ownerID, repoID` of a some targeted repository
+  - This relationship code is performed in the front-end Contexter `RepoAssignment` function
+- Front-end server may simply issue delete as `Admin` user, if admin does not have webauthn enabled either
+- The `CreateRepository` in the `CreatePost` function call resides in the front-end. It has an error handler that deletes the latent repository, but that handler can be tricked by the return value of the `CreateRepository` in order delete a targeted repository. As a result, `CreateRepository` and related helper functions must be in the Repo RPC server.
+- The `MigrateRepository` call in `MigratePost` is the same deal as the `CreateRepository`
+
+* Future Work
+- Webauthn enables a proxy front-end service to issue commands on behalf of user
+- Why is Kimchi bad/ugly to port over to RPC isolated webauthn?
+- Authentication text possible collisions in strings
+- Systematic way of detecting webauthn subversion opportunities
 * TODO
+- Check if API actually checks access tokens and that they cannot be leaked
 - Move the registration part of webauthn also into the Webauthn RPC server so that only the RPC server deals w/ the webauthn db table
 - Unify the code for this txAuthn text format in the creating and verifying end
 - Make extension verifier not return the session data since that is not needed for gogs txAuthn

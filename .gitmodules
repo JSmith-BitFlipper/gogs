@@ -1,3 +1,6 @@
 [submodule "webauthn"]
 	path = webauthn
 	url = https://github.com/JSmith-BitFlipper/webauthn.git
+[submodule "go-gogs-client"]
+	path = go-gogs-client
+	url = https://github.com/JSmith-BitFlipper/go-gogs-client.git

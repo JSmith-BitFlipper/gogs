@@ -317,7 +317,7 @@ func Get(c *context.APIContext) {
 	}))
 }
 
-func Delete(c *context.APIContext) {
+func Delete(c *context.APIContext, opt api.WebauthnContainer) {
 	owner, repo := parseOwnerAndRepo(c)
 	if c.Written() {
 		return
@@ -328,7 +328,8 @@ func Delete(c *context.APIContext) {
 		return
 	}
 
-	if err := db.DeleteRepository(owner.ID, repo.ID); err != nil {
+	// TODO: Make a call to Repo_GenericWebauthnBegin to populate the `sessionMap`, then worry about the valid webauthn data
+	if err := db.DeleteRepositoryFinish(owner.ID, owner.ID, repo.ID, opt.WebauthnData); err != nil {
 		c.Error(err, "delete repository")
 		return
 	}
@@ -424,4 +425,17 @@ func Releases(c *context.APIContext) {
 	}
 
 	c.JSONSuccess(&apiReleases)
+}
+
+func GenericWebauthnBegin(c *context.APIContext) {
+	// Get the generic webauthn options for the Repo RPC
+	options, err := db.Repo_GenericWebauthnBegin(c.User.ID)
+	if err != nil {
+		c.Error(err, "repo generic webauthn begin")
+		return
+	}
+
+	// Success!
+	c.JSONSuccess(options)
+	return
 }
