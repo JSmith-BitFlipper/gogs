@@ -10,11 +10,7 @@
        let options;
        try {
             options = await retrieveWebauthnOptions_URL('#enable_webauthn_form', 'https://localhost:8081/webauthn/begin_register');
-
-            console.log("IPOTS");
-            console.log(options);
-
-            attestationFinish_URL(options, "https://localhost:8081/...", '#enable_webauthn_form');
+            registrationFinish_URL(options, "https://localhost:8081/webauthn/finish_register", '#enable_webauthn_form');
        } catch (err) {
             alert("Error authenticating: " + err);
             window.location.reload(false);
