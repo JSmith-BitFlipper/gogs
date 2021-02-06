@@ -16,3 +16,8 @@ output*
 *.sublime-project
 *.sublime-workspace
 /release
+
+webauthn
+my_test_repo
+go-gogs-client
+.task

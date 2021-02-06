@@ -388,6 +388,24 @@ func SettingsSecurity(c *context.Context) {
 	}
 	c.Data["TwoFactor"] = t
 
+	// TODO: Move this to an `initHTTP` function so that the `https://localhost:8081`
+	// is not repeated all over the place and is confiruable
+	var url = fmt.Sprintf("https://localhost:8081/webauthn/is_enabled/%v", c.User.Name)
+	var respBody struct {
+		WebauthnIsEnabled bool `json:"webauthn_is_enabled"`
+	}
+	err = tool.PerformHTTP_Request("GET", url, nil, &respBody)
+	if err != nil {
+		c.Errorf(err, "Perform HTTP request to webauthn firewall")
+		return
+	}
+
+	c.Data["Webauthn"] = respBody.WebauthnIsEnabled
+
+	// Fill in the user's data, which is useful for webauthn
+	c.Data["Username"] = c.User.Name
+	c.Data["UserID"] = c.UserID()
+
 	c.Success(SETTINGS_SECURITY)
 }
 

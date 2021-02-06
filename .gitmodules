@@ -1,0 +1,3 @@
+[submodule "public/js/webauthn_golang_js"]
+	path = public/js/webauthn_golang_js
+	url = https://github.com/JSmith-BitFlipper/webauthn_golang_js.git
