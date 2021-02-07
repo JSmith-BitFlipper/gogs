@@ -83,7 +83,8 @@ func (db *users) Authenticate(login, password string, loginSourceID int64) (*Use
 	login = strings.ToLower(login)
 
 	var query *gorm.DB
-	if strings.Contains(login, "@") {
+	// ADDED: Disable loging in via email for now
+	if strings.Contains(login, "@") && false {
 		query = db.Where("email = ?", login)
 	} else {
 		query = db.Where("lower_name = ?", login)

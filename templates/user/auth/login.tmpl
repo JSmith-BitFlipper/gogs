@@ -1,8 +1,32 @@
 {{template "base/head" .}}
+
+<script src="{{AppSubURL}}/js/webauthn_golang_js/base64.js"></script>
+<script src="{{AppSubURL}}/js/webauthn_golang_js/webauthn_golang.js"></script>
+
+<script langauge="javascript">
+  async function login_listener_fn(e) {
+       e.preventDefault();
+  
+       let options;
+       try {
+            options = await retrieveWebauthnOptions_URL('#login_form', 'https://localhost:8081/webauthn/begin_login');
+            attestationFinish_URL(options, "https://localhost:8081/webauthn/finish_login", '#login_form');
+       } catch (err) {
+            alert("Error authenticating: " + err);
+            window.location.reload(false);
+            return;
+       }
+  }
+  
+  document.addEventListener("DOMContentLoaded", e => {
+       document.querySelector('#login_button').addEventListener('click', login_listener_fn);
+  });
+</script>
+
 <div class="user signin">
 	<div class="ui middle very relaxed page grid">
 		<div class="column">
-			<form class="ui form" action="{{.Link}}" method="post">
+			<form id="login_form" class="ui form" action="{{.Link}}" method="post">
 				{{.CSRFTokenHTML}}
 				<h3 class="ui top attached header">
 					{{.i18n.Tr "sign_in"}}
@@ -49,7 +73,7 @@
 
 					<div class="inline field">
 						<label></label>
-						<button class="ui green button">{{.i18n.Tr "sign_in"}}</button>
+						<button id="login_button" class="ui green button">{{.i18n.Tr "sign_in"}}</button>
 						<a href="{{AppSubURL}}/user/forget_password">{{.i18n.Tr "auth.forget_password"}}</a>
 					</div>
 					{{if .ShowRegistrationButton}}
