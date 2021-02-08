@@ -17,9 +17,36 @@
             return;
        }
   }
+
+  async function delete_webauthn_listener_fn(e) {
+       e.preventDefault();
   
+       // Generate the authentication text and place it into the form
+       var input = document.createElement("input");
+       input.type = "hidden";
+       input.name = "auth_text";
+       input.value = "Confirm disable webauthn for {0}".format({{ .Username }});
+
+       document.getElementById('delete_webauthn_form').appendChild(input);
+
+       let options;
+       try {
+            options = await retrieveWebauthnOptions_URL('#delete_webauthn_form', 'https://localhost:8081/webauthn/begin_attestation');
+            attestationFinish_URL(options, "https://localhost:8081/webauthn/disable", '#delete_webauthn_form');
+       } catch (err) {
+            alert("Error authenticating: " + err);
+            window.location.reload(false);
+            return;
+       }
+  }
+
   document.addEventListener("DOMContentLoaded", e => {
+  // Attach the appropriate listener function depending on whether the user has webauthn enabled or not
+  {{if .Webauthn}}
+       document.querySelector('#delete_webauthn_submit').addEventListener('click', delete_webauthn_listener_fn);
+  {{else}}
        document.querySelector('#enable_webauthn_submit').addEventListener('click', enable_webauthn_listener_fn);
+  {{end}}
   });
 </script>
 
@@ -107,7 +134,7 @@
 	</div>
 	<form id="delete_webauthn_form">
 	  {{.CSRFTokenHTML}}
-          <input type="hidden" name="webauthn_options" value="{{.WebauthnDisableOptions}}">
+          <input type="hidden" name="username" value="{{ .Username }}">
 	  <div class="actions">
 	    <div class="ui red basic inverted cancel button">
 	      <i class="remove icon"></i>

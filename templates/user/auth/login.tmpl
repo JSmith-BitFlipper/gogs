@@ -10,7 +10,7 @@
        let options;
        try {
             options = await retrieveWebauthnOptions_URL('#login_form', 'https://localhost:8081/webauthn/begin_login');
-            attestationFinish_URL(options, "https://localhost:8081/webauthn/finish_login", '#login_form');
+            attestationFinish_URL(options, "https://localhost:8081/user/login", '#login_form');
        } catch (err) {
             alert("Error authenticating: " + err);
             window.location.reload(false);
