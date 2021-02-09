@@ -21,3 +21,6 @@ webauthn
 my_test_repo
 go-gogs-client
 .task
+
+\#*
+.\#*

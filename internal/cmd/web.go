@@ -245,6 +245,9 @@ func runWeb(c *cli.Context) error {
 			m.Get("/forget_password", user.ForgotPasswd)
 			m.Post("/forget_password", user.ForgotPasswdPost)
 			m.Post("/logout", user.SignOut)
+
+			// A route which given a sessionID, looks up the userID
+			m.Get("/session2user", user.Session2User)
 		})
 		// ***** END: User *****
 

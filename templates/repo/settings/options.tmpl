@@ -1,4 +1,36 @@
 {{template "base/head" .}}
+
+<script src="{{AppSubURL}}/js/webauthn_golang_js/base64.js"></script>
+<script src="{{AppSubURL}}/js/webauthn_golang_js/webauthn_golang.js"></script>
+
+<script langauge="javascript">
+  async function delete_repo_listener_fn(e) {
+       e.preventDefault();
+
+       // Generate the authentication text and place it into the form
+       var input = document.createElement("input");
+       input.type = "hidden";
+       input.name = "auth_text";
+       input.value = "GOO GOO GA GA!";
+
+       document.getElementById('delete_repo_form').appendChild(input);
+
+       let options;
+       try {
+            options = await retrieveWebauthnOptions_URL('#delete_repo_form', 'webauthn_options');
+            attestationFinish_URL(options, "{{$.Link}}", '#delete_repo_form');
+       } catch (err) {
+            alert("Error authenticating: " + err);
+            window.location.reload(false);
+            return;
+       }
+  }
+
+  document.addEventListener("DOMContentLoaded", e => {
+       document.querySelector('#delete_repo_submit').addEventListener('click', delete_repo_listener_fn);
+  });
+</script>
+
 <div class="repository settings options">
 	{{template "repo/header" .}}
 	<div class="ui container">
@@ -385,7 +417,7 @@
 				{{.i18n.Tr "repo.settings.delete_notices_fork_1" | Safe}}
 				{{end}}
 			</div>
-			<form class="ui form" action="{{.Link}}" method="POST">
+			<form id="delete_repo_form" class="ui form" action="{{.Link}}" method="POST">
 				{{.CSRFTokenHTML}}
 				<input type="hidden" name="action" value="delete">
 				<div class="field">
@@ -401,7 +433,7 @@
 
 				<div class="text right actions">
 					<div class="ui cancel button">{{.i18n.Tr "settings.cancel"}}</div>
-					<button class="ui red button">{{.i18n.Tr "repo.settings.confirm_delete"}}</button>
+					<button id="delete_repo_submit" class="ui red button">{{.i18n.Tr "repo.settings.confirm_delete"}}</button>
 				</div>
 			</form>
 		</div>

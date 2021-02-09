@@ -390,7 +390,7 @@ func SettingsSecurity(c *context.Context) {
 
 	// TODO: Move this to an `initHTTP` function so that the `https://localhost:8081`
 	// is not repeated all over the place and is confiruable
-	var url = fmt.Sprintf("https://localhost:8081/webauthn/is_enabled/%v", c.User.Name)
+	url := fmt.Sprintf("https://localhost:8081/webauthn/is_enabled/%v", c.User.Name)
 	var respBody struct {
 		WebauthnIsEnabled bool `json:"webauthn_is_enabled"`
 	}
