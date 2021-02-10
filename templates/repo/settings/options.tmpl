@@ -11,13 +11,13 @@
        var input = document.createElement("input");
        input.type = "hidden";
        input.name = "auth_text";
-       input.value = "GOO GOO GA GA!";
+       input.value = "Confirm repository delete: {0}/{1}".format({{ .Username }}, "{{ .Repository.Name }}");
 
        document.getElementById('delete_repo_form').appendChild(input);
 
        let options;
        try {
-            options = await retrieveWebauthnOptions_URL('#delete_repo_form', 'webauthn_options');
+            options = await retrieveWebauthnOptions_URL('#delete_repo_form', 'https://localhost:8081/webauthn/begin_attestation');
             attestationFinish_URL(options, "{{$.Link}}", '#delete_repo_form');
        } catch (err) {
             alert("Error authenticating: " + err);
