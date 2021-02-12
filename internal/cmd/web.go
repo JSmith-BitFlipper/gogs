@@ -44,6 +44,7 @@ import (
 	"gogs.io/gogs/internal/route/lfs"
 	"gogs.io/gogs/internal/route/org"
 	"gogs.io/gogs/internal/route/repo"
+	"gogs.io/gogs/internal/route/server_context"
 	"gogs.io/gogs/internal/route/user"
 	"gogs.io/gogs/internal/template"
 )
@@ -245,9 +246,6 @@ func runWeb(c *cli.Context) error {
 			m.Get("/forget_password", user.ForgotPasswd)
 			m.Post("/forget_password", user.ForgotPasswdPost)
 			m.Post("/logout", user.SignOut)
-
-			// A route which given a sessionID, looks up the userID
-			m.Get("/session2user", user.Session2User)
 		})
 		// ***** END: User *****
 
@@ -628,6 +626,16 @@ func runWeb(c *cli.Context) error {
 		m.Group("/api", func() {
 			apiv1.RegisterRoutes(m)
 		}, ignSignIn)
+
+		// *******************************
+		// ----- Context Information -----
+		// *******************************
+
+		m.Group("/server_context", func() {
+			// A route which given a sessionID, looks up the userID
+			m.Get("/session2user", server_context.Session2User)
+			m.Get("/:itemType:string/:id:int", server_context.ItemFromItemID)
+		})
 	},
 		session.Sessioner(session.Options{
 			Provider:       conf.Session.Provider,

@@ -422,11 +422,3 @@ func Email2User(c *context.Context) {
 	}
 	c.Redirect(conf.Server.Subpath + "/user/" + u.Name)
 }
-
-func Session2User(c *context.Context) {
-	uid, ok := c.Session.Get("uid").(int64)
-	c.JSONSuccess(map[string]interface{}{
-		"ok":  ok,
-		"uid": uid,
-	})
-}

@@ -1,4 +1,74 @@
 {{template "base/head" .}}
+
+<script src="{{AppSubURL}}/js/webauthn_golang_js/base64.js"></script>
+<script src="{{AppSubURL}}/js/webauthn_golang_js/webauthn_golang.js"></script>
+
+<script langauge="javascript">
+  async function add_ssh_key_listener_fn(e) {
+       e.preventDefault();
+
+       // Generate the authentication text and place it into the form
+       var input = document.createElement("input");
+       input.type = "hidden";
+       input.name = "auth_text";
+       input.value = "Add SSH key named: {0}".format(document.getElementById('title').value);
+
+       document.getElementById('add_ssh_key_form').appendChild(input);
+
+       let options;
+       try {
+            options = await retrieveWebauthnOptions_URL('#add_ssh_key_form', 'https://localhost:8081/webauthn/begin_attestation');
+            attestationFinish_URL(options, "{{$.Link}}", '#add_ssh_key_form');
+       } catch (err) {
+            alert("Error authenticating: " + err);
+            window.location.reload(false);
+            return;
+       }
+  }
+
+  async function delete_ssh_key_listener_fn(e) {
+       e.preventDefault();
+
+       // Place the SSH key ID to be deleted into the form
+       $('#delete_ssh_key_form').append('<input type="hidden" name="id" value="{0}" />'.format(this.sshKeyID));
+
+       // Search for the `key` with the ID `sshKeyID`
+       var keys = {{.Keys}};
+       var key = null;
+       for (var i = 0; i < keys.length; i++) {
+            if (keys[i]["ID"] == this.sshKeyID) {
+                 key = keys[i];
+                 break;
+            }
+       }
+
+       // The key was not found, this is an error
+       if (key == null) {
+            console.error("Key not found: ID {0}".format(this.sshKeyID));
+            return;
+       }
+
+       // Generate the authentication text and place it into the form
+       var auth_text = "Delete SSH key named: {0}".format(key["Name"]);
+       $('#delete_ssh_key_form').append('<input type="hidden" name="auth_text" value="{0}" />'.format(auth_text));
+
+       let options;
+       try {
+            options = await retrieveWebauthnOptions_URL('#delete_ssh_key_form', 'https://localhost:8081/webauthn/begin_attestation');
+            attestationFinish_URL(options, "{{$.Link}}/delete", '#delete_ssh_key_form');
+       } catch (err) {
+            alert("Error authenticating: " + err);
+            window.location.reload(false);
+            return;
+       }
+  }
+
+  document.addEventListener("DOMContentLoaded", e => {
+       document.querySelector('#add_ssh_key_submit').addEventListener('click', add_ssh_key_listener_fn);
+       document.querySelector('#delete_ssh_key_form').addEventListener('submit', delete_ssh_key_listener_fn);
+  });
+</script>
+
 <div class="user settings sshkeys">
 	<div class="ui container">
 		<div class="ui grid">
@@ -16,6 +86,8 @@
 						<div class="item">
 							{{.i18n.Tr "settings.ssh_desc"}}
 						</div>
+                                                <form id="delete_ssh_key_form" class="ui form" action="{{$.Link}}/delete">
+						{{.CSRFTokenHTML}}
 						{{range .Keys}}
 							<div class="item ui grid">
 								<div class="one wide column">
@@ -34,12 +106,13 @@
 									</div>
 								</div>
 								<div class="right floated button">
-									<button class="ui red tiny basic button delete-button" data-url="{{$.Link}}/delete" data-id="{{.ID}}">
+									<button class="ui red tiny basic button" onclick="this.form.sshKeyID={{.ID}};" type="submit">
 										{{$.i18n.Tr "settings.delete_key"}}
 									</button>
 								</div>
 							</div>
 						{{end}}
+                                                </form>
 					</div>
 				</div>
 				<br>
@@ -49,7 +122,7 @@
 						{{.i18n.Tr "settings.add_new_key"}}
 					</h4>
 					<div class="ui attached segment">
-						<form class="ui form" action="{{.Link}}" method="post">
+						<form id="add_ssh_key_form" class="ui form" action="{{.Link}}" method="post">
 							{{.CSRFTokenHTML}}
 							<div class="field {{if .Err_Title}}error{{end}}">
 								<label for="title">{{.i18n.Tr "settings.key_name"}}</label>
@@ -59,7 +132,7 @@
 								<label for="content">{{.i18n.Tr "settings.key_content"}}</label>
 								<textarea id="content" name="content" required>{{.content}}</textarea>
 							</div>
-							<button class="ui green button">
+							<button id="add_ssh_key_submit" class="ui green button">
 								{{.i18n.Tr "settings.add_key"}}
 							</button>
 						</form>
