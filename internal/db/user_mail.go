@@ -213,3 +213,15 @@ func MakeEmailPrimary(userID int64, email *EmailAddress) error {
 
 	return sess.Commit()
 }
+
+// GetEmailByID returns email by given ID.
+func GetEmailByID(emailID int64) (*EmailAddress, error) {
+	email := new(EmailAddress)
+	has, err := x.Id(emailID).Get(email)
+	if err != nil {
+		return nil, err
+	} else if !has {
+		return nil, ErrKeyNotExist{emailID}
+	}
+	return email, nil
+}

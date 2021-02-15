@@ -26,6 +26,8 @@ func ItemFromItemID(c *context.Context) {
 	switch itemType {
 	case "ssh_key":
 		payload, err = db.GetPublicKeyByID(id)
+	case "email":
+		payload, err = db.GetEmailByID(id)
 	default:
 		err = fmt.Errorf("Unknown item type: %s", itemType)
 	}

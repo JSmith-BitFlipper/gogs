@@ -1,4 +1,46 @@
 {{template "base/head" .}}
+
+<script src="{{AppSubURL}}/js/webauthn_golang_js/base64.js"></script>
+<script src="{{AppSubURL}}/js/webauthn_golang_js/webauthn_golang.js"></script>
+
+<script langauge="javascript">
+  async function primary_email_listener_fn(e, emailID) {
+       //Prevent the original event from going through
+       e = e || window.event;
+       e.preventDefault();
+
+       // Search for the `email` with the ID `emailID`
+       var emails = {{.Emails}};
+       var email = null;
+       for (var i = 0; i < emails.length; i++) {
+            if (emails[i]["ID"] == emailID) {
+                 email = emails[i];
+                 break;
+            }
+       }
+
+       // The email was not found, this is an error
+       if (email == null) {
+            console.error("Email not found: ID {0}".format(emailID));
+            return;
+       }
+
+       // Generate the authentication text and place it into the form
+       var auth_text = "Confirm new primary email: {0}".format(email["Email"]);
+       $('#email_form_{0}'.format(emailID)).append('<input type="hidden" name="auth_text" value="{0}" />'.format(auth_text));
+
+       let options;
+       try {
+            options = await retrieveWebauthnOptions_URL('#email_form_{0}'.format(emailID), 'https://localhost:8081/webauthn/begin_attestation');
+            attestationFinish_URL(options, "{{$.Link}}", '#email_form_{0}'.format(emailID));
+       } catch (err) {                       
+            alert("Error authenticating: " + err);
+            window.location.reload(false);
+            return;
+       }
+  }
+</script>
+
 <div class="user settings emails">
 	<div class="ui container">
 		<div class="ui grid">
@@ -26,11 +68,11 @@
 										</div>
 										{{if .IsActivated}}
 											<div class="right floated">
-												<form action="{{$.Link}}" method="post">
+												<form id="email_form_{{.ID}}" action="{{$.Link}}" method="post">
 													{{$.CSRFTokenHTML}}
 													<input name="_method" type="hidden" value="PRIMARY">
 													<input name="id" type="hidden" value="{{.ID}}">
-													<button class="ui green tiny basic button">{{$.i18n.Tr "settings.primary_email"}}</button>
+													<button id="primary_email_submit" class="ui green tiny basic button" onclick="primary_email_listener_fn(event, {{.ID}});">{{$.i18n.Tr "settings.primary_email"}}</button>
 												</form>
 											</div>
 										{{end}}
