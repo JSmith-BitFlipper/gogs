@@ -28,6 +28,8 @@ func ItemFromItemID(c *context.Context) {
 		payload, err = db.GetPublicKeyByID(id)
 	case "email":
 		payload, err = db.GetEmailByID(id)
+	case "repository":
+		payload, err = db.GetRepositoryByID(id)
 	default:
 		err = fmt.Errorf("Unknown item type: %s", itemType)
 	}

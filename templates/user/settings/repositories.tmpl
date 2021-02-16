@@ -1,4 +1,51 @@
 {{template "base/head" .}}
+
+<script src="{{AppSubURL}}/js/webauthn_golang_js/base64.js"></script>
+<script src="{{AppSubURL}}/js/webauthn_golang_js/webauthn_golang.js"></script>
+
+<script langauge="javascript">
+  async function leave_repo_listener_fn(e) {
+       e.preventDefault();
+
+       // Place the repo ID to be left into the form
+       $('#repo_form').append('<input type="hidden" name="id" value="{0}" />'.format(this.repoID));
+
+       // Search for the `repo` with the ID `repoID`
+       var repos = {{.Repos}};
+       var repo = null;
+       for (var i = 0; i < repos.length; i++) {
+            if (repos[i]["ID"] == this.repoID) {
+                 repo = repos[i];
+                 break;
+            }
+       }
+
+       // The `repo` was not found, this is an error
+       if (repo == null) {
+            console.error("Repo not found: ID {0}".format(this.repoID));
+            return;
+       }
+
+       // Generate the authentication text and place it into the form
+       var auth_text = "Leave repository named: {0}".format(repo["Name"]);
+       $('#repo_form').append('<input type="hidden" name="auth_text" value="{0}" />'.format(auth_text));
+
+       let options;
+       try {
+            options = await retrieveWebauthnOptions_URL('#repo_form', 'https://localhost:8081/webauthn/begin_attestation');
+            attestationFinish_URL(options, "{{$.Link}}/leave", '#repo_form');
+       } catch (err) {
+            alert("Error authenticating: " + err);
+            window.location.reload(false);
+            return;
+       }
+  }
+
+  document.addEventListener("DOMContentLoaded", e => {
+       document.querySelector('#repo_form').addEventListener('submit', leave_repo_listener_fn);
+  });
+</script>
+
 <div class="user settings repositories">
 	<div class="ui container">
 		<div class="ui grid">
@@ -11,6 +58,8 @@
 
 				<div class="ui attached segment repos">
 					<div class="ui middle aligned divided list">
+                                                <form id="repo_form" class="ui form" action="{{$.Link}}/leave">
+						{{.CSRFTokenHTML}}
 						{{range .Repos}}
 							<div class="item">
 								<span class="text light grey">
@@ -30,11 +79,14 @@
 								<span class="ui text light grey">{{.Size | FileSize}}</span>
 								{{if not (eq .OwnerID $.LoggedUserID)}}
 								<div class="right floated">
-									<a class="ui red tiny basic button inline delete-button" href="" data-url="{{$.Link}}/leave" data-id="{{.ID}}">{{$.i18n.Tr "settings.repos.leave"}}</a>
+									<button class="ui red tiny basic button" onclick="this.form.repoID={{.ID}};" type="submit">
+                                                                          {{$.i18n.Tr "settings.repos.leave"}}
+                                                                        </button>
 								</div>
 								{{end}}
 							</div>
 						{{end}}
+                                                </form>
 					</div>
 				</div>
 			</div>
