@@ -30,6 +30,8 @@ type AccessTokensStore interface {
 	// GetBySHA returns the access token with given SHA1.
 	// It returns ErrAccessTokenNotExist when not found.
 	GetBySHA(sha string) (*AccessToken, error)
+	// GetByID returns the access token with a given `id` and `userID`
+	GetByID(userID, id int64) (*AccessToken, error)
 	// List returns all access tokens belongs to given user.
 	List(userID int64) ([]*AccessToken, error)
 	// Save persists all values of given access token.
@@ -141,6 +143,18 @@ func (db *accessTokens) GetBySHA(sha string) (*AccessToken, error) {
 	if err != nil {
 		if err == gorm.ErrRecordNotFound {
 			return nil, ErrAccessTokenNotExist{args: errutil.Args{"sha": sha}}
+		}
+		return nil, err
+	}
+	return token, nil
+}
+
+func (db *accessTokens) GetByID(userID, id int64) (*AccessToken, error) {
+	token := new(AccessToken)
+	err := db.Where("id = ? AND uid = ?", id, userID).First(token).Error
+	if err != nil {
+		if err == gorm.ErrRecordNotFound {
+			return nil, ErrAccessTokenNotExist{args: errutil.Args{"userID": userID, "id": id}}
 		}
 		return nil, err
 	}

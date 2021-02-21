@@ -634,7 +634,7 @@ func runWeb(c *cli.Context) error {
 		m.Group("/server_context", func() {
 			// A route which given a sessionID, looks up the userID
 			m.Get("/session2user", server_context.Session2User)
-			m.Get("/:itemType:string/:id:int", server_context.ItemFromItemID)
+			m.Get("/:itemType:string/*", server_context.GetContext)
 		})
 	},
 		session.Sessioner(session.Options{

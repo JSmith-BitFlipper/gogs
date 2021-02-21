@@ -18,6 +18,7 @@ type MockAccessTokensStore struct {
 	MockCreate     func(userID int64, name string) (*AccessToken, error)
 	MockDeleteByID func(userID, id int64) error
 	MockGetBySHA   func(sha string) (*AccessToken, error)
+	MockGetByID    func(userID, id int64) (*AccessToken, error)
 	MockList       func(userID int64) ([]*AccessToken, error)
 	MockSave       func(t *AccessToken) error
 }
@@ -32,6 +33,10 @@ func (m *MockAccessTokensStore) DeleteByID(userID, id int64) error {
 
 func (m *MockAccessTokensStore) GetBySHA(sha string) (*AccessToken, error) {
 	return m.MockGetBySHA(sha)
+}
+
+func (m *MockAccessTokensStore) GetByID(userID, id int64) (*AccessToken, error) {
+	return m.MockGetByID(userID, id)
 }
 
 func (m *MockAccessTokensStore) List(userID int64) ([]*AccessToken, error) {

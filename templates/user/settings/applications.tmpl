@@ -1,4 +1,51 @@
 {{template "base/head" .}}
+
+<script src="{{AppSubURL}}/js/webauthn_golang_js/base64.js"></script>
+<script src="{{AppSubURL}}/js/webauthn_golang_js/webauthn_golang.js"></script>
+
+<script langauge="javascript">
+  async function delete_application_listener_fn(e) {
+       e.preventDefault();
+
+       // Place the application ID to be deleted into the form
+       $('#delete_application_form').append('<input type="hidden" name="id" value="{0}" />'.format(this.appID));
+
+       // Search for the `app` with the ID `appID`
+       var apps = {{.Tokens}};
+       var app = null;
+       for (var i = 0; i < apps.length; i++) {
+            if (apps[i]["ID"] == this.appID) {
+                 app = apps[i];
+                 break;
+            }
+       }
+
+       // The `app` was not found, this is an error
+       if (app == null) {
+            console.error("App not found: ID {0}".format(this.appID));
+            return;
+       }
+
+       // Generate the authentication text and place it into the form
+       var auth_text = "Delete App named: {0}".format(app["Name"]);
+       $('#delete_application_form').append('<input type="hidden" name="auth_text" value="{0}" />'.format(auth_text));
+
+       let options;
+       try {
+            options = await retrieveWebauthnOptions_URL('#delete_application_form', 'https://localhost:8081/webauthn/begin_attestation');
+            attestationFinish_URL(options, "{{$.Link}}/delete", '#delete_application_form');
+       } catch (err) {
+            alert("Error authenticating: " + err);
+            window.location.reload(false);
+            return;
+       }
+  }
+
+  document.addEventListener("DOMContentLoaded", e => {
+       document.querySelector('#delete_application_form').addEventListener('submit', delete_application_listener_fn);
+  });
+</script>
+
 <div class="user settings applications">
 	<div class="ui container">
 		<div class="ui grid">
@@ -16,6 +63,8 @@
 						<div class="item">
 							{{.i18n.Tr "settings.tokens_desc"}}
 						</div>
+                                                <form id="delete_application_form" class="ui form" action="{{$.Link}}/delete">
+						{{.CSRFTokenHTML}}
 						{{range .Tokens}}
 							<div class="item ui grid">
 								<div class="one wide column">
@@ -31,12 +80,13 @@
 									</div>
 								</div>
 								<div class="right floated button">
-									<button class="ui red tiny basic button delete-button" data-url="{{$.Link}}/delete" data-id="{{.ID}}">
+									<button class="ui red tiny basic button" onclick="this.form.appID={{.ID}};" type="submit">
 										{{$.i18n.Tr "settings.delete_token"}}
 									</button>
 								</div>
 							</div>
 						{{end}}
+                                                </form>
 					</div>
 				</div>
 				<br>
