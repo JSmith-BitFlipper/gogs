@@ -32,6 +32,16 @@ func itemFromItemID(itemType string, id int64) (payload interface{}, err error) 
 	return
 }
 
+func itemFromItemStringID(itemType string, id string) (payload interface{}, err error) {
+	switch itemType {
+	case "attachment":
+		payload, err = db.GetAttachmentByUUID(id)
+	default:
+		err = fmt.Errorf("Unknown item type: %s", itemType)
+	}
+	return
+}
+
 func itemFromUserItemID(itemType string, userID, id int64) (payload interface{}, err error) {
 	switch itemType {
 	case "app_token":
@@ -56,7 +66,7 @@ func GetContext(c *context.Context) {
 		if id, parse_err := strconv.ParseInt(args[0], 10, 64); parse_err == nil {
 			payload, err = itemFromItemID(itemType, id)
 		} else {
-			// TODO: string identifier
+			payload, err = itemFromItemStringID(itemType, args[0])
 		}
 	} else if len(args) == 2 {
 		// The `args` should be pair userID/ID

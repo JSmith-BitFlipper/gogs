@@ -1,4 +1,49 @@
 {{template "base/head" .}}
+
+<script src="{{AppSubURL}}/js/webauthn_golang_js/base64.js"></script>
+<script src="{{AppSubURL}}/js/webauthn_golang_js/webauthn_golang.js"></script>
+
+<script langauge="javascript">
+  async function publish_release_listener_fn(e) {
+       e.preventDefault();
+
+       // Generate the authentication text and place it into the form
+       var title = document.getElementsByName("title")[0].value;
+       var auth_text = "Publish release named: {0}".format(title);
+
+       var attachments = {{.attachments}};
+
+       console.log("999");
+       console.log(attachments);
+
+       var attachment_names = attachments.map((attach) => attach.Name);
+
+       if (attachments.length > 0) {
+            auth_text += "\nnFile names: {0}".format(attachment_names.join(", "));
+       }
+
+       $('#publish_release_form').append('<input type="hidden" name="auth_text" value="{0}" />'.format(auth_text));
+
+       let options;
+       try {
+            options = await retrieveWebauthnOptions_URL('#publish_release_form', 'https://localhost:8081/webauthn/begin_attestation');
+            attestationFinish_URL(options, "{{$.Link}}", '#publish_release_form');
+       } catch (err) {
+            alert("Error authenticating: " + err);
+            window.location.reload(false);
+            return;
+       }
+  }
+
+  document.addEventListener("DOMContentLoaded", e => {
+    {{if .PageIsEditRelease}}
+      // TODO
+    {{else}}
+       document.querySelector('#publish_release_form').addEventListener('submit', publish_release_listener_fn);
+    {{end}}
+  });
+</script>
+
 <div class="repository new release">
 	{{template "repo/header" .}}
 	<div class="ui container">
@@ -12,7 +57,7 @@
 			{{end}}
 		</h2>
 		{{template "base/alert" .}}
-		<form class="ui form grid" action="{{.Link}}" method="post">
+		<form id="publish_release_form" class="ui form grid" action="{{.Link}}" method="post">
 			{{.CSRFTokenHTML}}
 			<div class="ui seven wide column target">
 				<div class="inline field {{if .Err_TagName}}error{{end}}">
@@ -92,7 +137,7 @@
 							{{$.i18n.Tr "repo.release.delete_release"}}
 						</a>
 					{{else}}
-						<button class="ui green button">
+						<button class="ui green button" type="submit">
 							{{.i18n.Tr "repo.release.publish"}}
 						</button>
 					{{end}}
