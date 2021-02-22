@@ -18,36 +18,62 @@ func Session2User(c *context.Context) {
 	})
 }
 
-func itemFromItemID(itemType string, id int64) (payload interface{}, err error) {
-	switch itemType {
-	case "ssh_key":
-		payload, err = db.GetPublicKeyByID(id)
-	case "email":
-		payload, err = db.GetEmailByID(id)
-	case "repository":
-		payload, err = db.GetRepositoryByID(id)
-	default:
-		err = fmt.Errorf("Unknown item type: %s", itemType)
-	}
-	return
-}
+func itemFromIDs(itemType string, args []string) (payload interface{}, err error) {
+	ids := make([]interface{}, len(args))
 
-func itemFromItemStringID(itemType string, id string) (payload interface{}, err error) {
 	switch itemType {
+	case "ssh_key", "email", "repository":
+		// Single `int64` id
+		if len(args) != 1 {
+			err = fmt.Errorf("Invalid number of args for context")
+			return
+		}
+
+		id, parse_err := strconv.ParseInt(args[0], 10, 64)
+		if parse_err != nil {
+			err = fmt.Errorf("Unable to parse context ids: %v", args)
+			return
+		}
+		ids[0] = id
 	case "attachment":
-		payload, err = db.GetAttachmentByUUID(id)
+		// Single `string` id
+		if len(args) != 1 {
+			err = fmt.Errorf("Invalid number of args for context")
+			return
+		}
+		ids[0] = args[0]
+	case "app_token":
+		// Double `int64` ids
+		if len(args) != 2 {
+			err = fmt.Errorf("Invalid number of args for context")
+			return
+		}
+		// The `args` should be pair userID/ID
+		userID, parse1_err := strconv.ParseInt(args[0], 10, 64)
+		id, parse2_err := strconv.ParseInt(args[1], 10, 64)
+
+		if parse1_err != nil || parse2_err != nil {
+			err = fmt.Errorf("Unable to parse context ids: %v", args)
+			return
+		}
+		ids[0] = userID
+		ids[1] = id
 	default:
 		err = fmt.Errorf("Unknown item type: %s", itemType)
+		return
 	}
-	return
-}
 
-func itemFromUserItemID(itemType string, userID, id int64) (payload interface{}, err error) {
 	switch itemType {
 	case "app_token":
-		payload, err = db.AccessTokens.GetByID(userID, id)
-	default:
-		err = fmt.Errorf("Unknown item type: %s", itemType)
+		payload, err = db.AccessTokens.GetByID(ids[0].(int64), ids[1].(int64))
+	case "attachment":
+		payload, err = db.GetAttachmentByUUID(ids[0].(string))
+	case "email":
+		payload, err = db.GetEmailByID(ids[0].(int64))
+	case "repository":
+		payload, err = db.GetRepositoryByID(ids[0].(int64))
+	case "ssh_key":
+		payload, err = db.GetPublicKeyByID(ids[0].(int64))
 	}
 
 	return
@@ -57,30 +83,7 @@ func GetContext(c *context.Context) {
 	itemType := c.Params(":itemType")
 	args := strings.Split(c.Params("*"), "/")
 
-	var payload interface{}
-	var err error
-
-	// The `args` should be an ID or a string identifier
-	if len(args) == 1 {
-		// Try parsing an `id` first
-		if id, parse_err := strconv.ParseInt(args[0], 10, 64); parse_err == nil {
-			payload, err = itemFromItemID(itemType, id)
-		} else {
-			payload, err = itemFromItemStringID(itemType, args[0])
-		}
-	} else if len(args) == 2 {
-		// The `args` should be pair userID/ID
-		userID, parse1_err := strconv.ParseInt(args[0], 10, 64)
-		id, parse2_err := strconv.ParseInt(args[1], 10, 64)
-
-		if parse1_err != nil || parse2_err != nil {
-			err = fmt.Errorf("Unable to parse userID/id context combo: %v/%v", args[0], args[1])
-		}
-
-		payload, err = itemFromUserItemID(itemType, userID, id)
-	} else {
-		err = fmt.Errorf("Unknown context to retrieve: %v", args)
-	}
+	payload, err := itemFromIDs(itemType, args)
 
 	// An error occurred somewhere, relay that error onward
 	if err != nil {
