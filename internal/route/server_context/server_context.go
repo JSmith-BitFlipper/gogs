@@ -48,16 +48,32 @@ func itemFromIDs(itemType string, args []string) (payload interface{}, err error
 			err = fmt.Errorf("Invalid number of args for context")
 			return
 		}
-		// The `args` should be pair userID/ID
-		userID, parse1_err := strconv.ParseInt(args[0], 10, 64)
-		id, parse2_err := strconv.ParseInt(args[1], 10, 64)
+
+		id1, parse1_err := strconv.ParseInt(args[0], 10, 64)
+		id2, parse2_err := strconv.ParseInt(args[1], 10, 64)
 
 		if parse1_err != nil || parse2_err != nil {
 			err = fmt.Errorf("Unable to parse context ids: %v", args)
 			return
 		}
-		ids[0] = userID
-		ids[1] = id
+		ids[0] = id1
+		ids[1] = id2
+	case "repo_webhook":
+		// Two `strings` and a `int64` id
+		if len(args) != 3 {
+			err = fmt.Errorf("Invalid number of args for context")
+			return
+		}
+
+		id, parse_err := strconv.ParseInt(args[2], 10, 64)
+		if parse_err != nil {
+			err = fmt.Errorf("Unable to parse context ids: %v", args)
+			return
+		}
+
+		ids[0] = args[0]
+		ids[1] = args[1]
+		ids[2] = id
 	default:
 		err = fmt.Errorf("Unknown item type: %s", itemType)
 		return
@@ -74,6 +90,20 @@ func itemFromIDs(itemType string, args []string) (payload interface{}, err error
 		payload, err = db.GetRepositoryByID(ids[0].(int64))
 	case "ssh_key":
 		payload, err = db.GetPublicKeyByID(ids[0].(int64))
+	case "repo_webhook":
+		var user *db.User
+		user, err = db.GetUserByName(ids[0].(string))
+		if err != nil {
+			return
+		}
+
+		var repo *db.Repository
+		repo, err = db.GetRepositoryByName(user.ID, ids[1].(string))
+		if err != nil {
+			return
+		}
+
+		payload, err = db.GetWebhookOfRepoByID(repo.ID, ids[2].(int64))
 	}
 
 	return
